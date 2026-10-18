@@ -1,4 +1,35 @@
 // =========================================================
+// 0. FUNÇÃO GLOBAL PARA MODAL DE ALERTA
+// =========================================================
+function mostrarAlerta(mensagem, titulo = "Aviso") {
+    return new Promise((resolve) => {
+        const tpl = document.getElementById('tpl-modal-alerta');
+        if (!tpl) {
+            window.alert(mensagem);
+            resolve();
+            return;
+        }
+
+        // Fecha qualquer modal de correção/agendamento que esteja aberto por baixo
+        const modalAnterior = document.querySelector('.modal-overlay');
+        if (modalAnterior) modalAnterior.remove();
+
+        const clone = tpl.content.cloneNode(true);
+        document.body.appendChild(clone);
+        
+        const modal = document.querySelector('.modal-overlay');
+        modal.querySelector('#modal-alerta-titulo').innerText = titulo;
+        modal.querySelector('#modal-alerta-texto').innerText = mensagem;
+
+        const btnOk = modal.querySelector('#btn-fechar-alerta');
+        btnOk.onclick = () => {
+            modal.remove();
+            resolve();
+        };
+    });
+}
+
+// =========================================================
 // 1. CONFIGURAÇÕES E ESTADO GLOBAL
 // =========================================================
 const principal = document.getElementById('conteudo-principal');
@@ -30,14 +61,11 @@ async function renderizarHome() {
     carregarTela('tpl-home');
 
     const cardPreview = document.getElementById('home-card-dinamico');
-    const containerBotoes = document.getElementById('home-botoes-container'); // Criaremos esta div ou controle via JS
 
     if (usuarioLogado) {
-        // Se estiver logado, esconde os botões "Acessar o portal" e "Criar conta"
         const divBotoes = document.getElementById('bloco-botoes-home');
         if (divBotoes) divBotoes.style.display = 'none';
 
-        // Busca estatísticas rápidas para o card dinâmico da Home
         let totalTurmas = 0;
         if (usuarioLogado.tipo === 'professor') {
             const { count } = await _supabase.from('turmas').select('*', { count: 'exact', head: true }).eq('professor_id', getID(usuarioLogado));
@@ -70,7 +98,6 @@ async function renderizarHome() {
             </div>
         `;
     } else {
-        // Se NÃO estiver logado, ativa os botões normalmente
         document.getElementById('btn-home-acessar').onclick = () => mostrarLogin();
         document.getElementById('btn-home-criar').onclick = () => mostrarCadastro();
 
@@ -108,7 +135,9 @@ function mostrarLogin() {
             usuarioLogado = data;
             localStorage.setItem('usuarioSessao', JSON.stringify(data));
             renderizarDashboard();
-        } else alert("Dados inválidos. Verifique seu e-mail e senha.");
+        } else {
+            await mostrarAlerta("Dados inválidos. Verifique seu e-mail e senha.", "Erro de Acesso");
+        }
     };
 }
 
@@ -119,12 +148,17 @@ function mostrarTelaRecuperar() {
         e.preventDefault();
         const email = document.getElementById('r-email').value.toLowerCase().trim();
         const { data } = await _supabase.from('usuarios').select('nome, email').eq('email', email).maybeSingle();
-        if (!data) return alert("E-mail não cadastrado.");
+        if (!data) {
+            await mostrarAlerta("E-mail não cadastrado.", "Atenção");
+            return;
+        }
         const pin = Math.floor(100000 + Math.random() * 900000).toString();
         try {
             await emailjs.send(SERVICE_ID, TEMPLATE_ID, { nome: data.nome, pin, email_to: email });
             mostrarTelaDefinirNovaSenha(email, pin);
-        } catch (e) { alert("Erro ao enviar e-mail."); }
+        } catch (err) { 
+            await mostrarAlerta("Erro ao enviar e-mail.", "Erro"); 
+        }
     };
 }
 
@@ -132,9 +166,13 @@ function mostrarTelaDefinirNovaSenha(email, pinCorreto) {
     carregarTela('tpl-nova-senha');
     document.getElementById('form-atualizar-senha').onsubmit = async (e) => {
         e.preventDefault();
-        if (document.getElementById('r-pin').value !== pinCorreto) return alert("PIN incorreto.");
+        if (document.getElementById('r-pin').value !== pinCorreto) {
+            await mostrarAlerta("PIN incorreto.", "Erro");
+            return;
+        }
         await _supabase.from('usuarios').update({ senha: document.getElementById('r-nova-senha').value }).eq('email', email);
-        alert("Senha alterada com sucesso!"); mostrarLogin();
+        await mostrarAlerta("Senha alterada com sucesso!", "Sucesso"); 
+        mostrarLogin();
     };
 }
 
@@ -151,20 +189,21 @@ function mostrarCadastro() {
 
         const regexSenha = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
         if (!regexSenha.test(senha)) {
-            alert("A senha deve conter no mínimo:\n- 8 caracteres\n- Uma letra maiúscula\n- Uma letra minúscula\n- Um número");
+            await mostrarAlerta("A senha deve conter no mínimo:\n- 8 caracteres\n- Uma letra maiúscula\n- Uma letra minúscula\n- Um número", "Requisito de Senha");
             return;
         }
 
         if (tipo === 'professor' && !email.includes('ifpr.edu.br')) {
-            return alert("Docentes devem usar e-mail institucional (@ifpr.edu.br)");
+            await mostrarAlerta("Docentes devem usar e-mail institucional (@ifpr.edu.br)", "Atenção");
+            return;
         }
 
         const pin = Math.floor(100000 + Math.random() * 900000).toString();
         try {
             await emailjs.send(SERVICE_ID, TEMPLATE_ID, { nome, pin, email_to: email });
             mostrarValidacaoPin(email, pin, nome, tipo, senha);
-        } catch (e) { 
-            alert("Erro ao enviar e-mail de confirmação."); 
+        } catch (err) { 
+            await mostrarAlerta("Erro ao enviar e-mail de confirmação.", "Erro"); 
         }
     };
 }
@@ -174,8 +213,11 @@ function mostrarValidacaoPin(email, pinCorreto, nome, tipo, senha) {
     document.getElementById('btn-v-pin').onclick = async () => {
         if (document.getElementById('input-pin').value === pinCorreto) {
             await _supabase.from('usuarios').insert([{ nome, email, senha, tipo, email_validado: true, pin_validacao: true }]);
-            alert("Conta ativada com sucesso!"); mostrarLogin();
-        } else alert("PIN incorreto.");
+            await mostrarAlerta("Conta ativada com sucesso!", "Sucesso"); 
+            mostrarLogin();
+        } else {
+            await mostrarAlerta("PIN incorreto.", "Erro");
+        }
     };
 }
 
@@ -198,7 +240,6 @@ async function renderizarProfessor() {
             container.innerHTML = "<p style='grid-column: 1/-1; text-align:center; color:#666;'>Nenhuma turma encontrada.</p>";
             return;
         }
-        // MODIFICAÇÃO SOLICITADA: Dois botões no card ("Corrigir cronogramas" e "Propor cronogramas")
         container.innerHTML = listaFiltrada.map(t => `
             <div class="card-item">
                 <h3>${t.nome}</h3>
@@ -237,11 +278,9 @@ async function gerenciarTurma(turmaId, nomeTurma) {
     document.getElementById('txt-g-nome').innerText = nomeTurma;
     document.getElementById('btn-v-prof').onclick = renderizarProfessor;
     
-    
     carregarCronogramasGestao(turmaId);
 }
 
-// 1. PASSO 1: Carrega a lista de Cronogramas da Turma
 async function carregarCronogramasGestao(turmaId) {
     const { data: ag } = await _supabase.from('cronograma').select('*').eq('turma_id', turmaId).order('data', {ascending:true});
     const containerCronograma = document.getElementById('res-cronograma');
@@ -267,9 +306,7 @@ async function carregarCronogramasGestao(turmaId) {
     }
 }
 
-// 2. PASSO 2: Quando o professor clica no Cronograma, carrega a lista de Alunos
 async function selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, turmaId) {
-    // Destaca visualmente o cronograma selecionado
     document.querySelectorAll('.card-crono-selecionavel').forEach(el => el.style.background = "#fff");
     event.currentTarget.style.background = "#f0f7f0";
 
@@ -283,7 +320,6 @@ async function selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, 
         return;
     }
 
-    // Busca as entregas já feitas para este cronograma específico
     const { data: entregas } = await _supabase.from('progresso_aluno').select('*').eq('cronograma_id', cronogramaId);
 
     containerAlunos.innerHTML = alunos.map(a => {
@@ -308,7 +344,6 @@ async function selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, 
     }).join('');
 }
 
-// 3. PASSO 3 & 4: Abre o Template/Modal com a atividade do aluno escolhido para corrigir
 async function abrirModalCorrecaoAluno(cronogramaId, cronogramaTitulo, alunoId, alunoNome) {
     const { data: entrega } = await _supabase.from('progresso_aluno')
         .select('*')
@@ -345,10 +380,8 @@ async function abrirModalCorrecaoAluno(cronogramaId, cronogramaTitulo, alunoId, 
         const feedback = modal.querySelector('#mod-corr-feedback').value;
 
         if (entrega) {
-            // Atualiza a nota existente
             await _supabase.from('progresso_aluno').update({ nota, feedback }).eq('id', entrega.id);
         } else {
-            // Se o professor quiser avaliar mesmo sem envio prévio
             await _supabase.from('progresso_aluno').insert([{
                 cronograma_id: cronogramaId,
                 aluno_id: alunoId,
@@ -358,9 +391,8 @@ async function abrirModalCorrecaoAluno(cronogramaId, cronogramaTitulo, alunoId, 
             }]);
         }
 
-        alert("✅ Correção salva com sucesso!");
+        await mostrarAlerta("✅ Correção salva com sucesso!", "Sucesso");
         modal.remove();
-        // Atualiza a lista de alunos daquele cronograma
         selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, usuarioLogado.turma_atual_id);
     };
 
@@ -368,7 +400,6 @@ async function abrirModalCorrecaoAluno(cronogramaId, cronogramaTitulo, alunoId, 
 }
 
 async function carregarDadosGestao(turmaId, alunoSelecionadoId = null) {
-    // 1. Carrega alunos matriculados
     const { data: al } = await _supabase.from('turma_alunos').select('aluno_id, usuarios(nome)').eq('turma_id', turmaId);
     const containerAlunos = document.getElementById('res-alunos');
     
@@ -383,7 +414,6 @@ async function carregarDadosGestao(turmaId, alunoSelecionadoId = null) {
         }
     }
 
-    // 2. Carrega Cronograma da turma (Ordem exigida: Cronograma primeiro)
     const { data: ag } = await _supabase.from('cronograma').select('*').eq('turma_id', turmaId).order('data', {ascending:true});
     const containerCronograma = document.getElementById('res-cronograma');
     
@@ -402,7 +432,6 @@ async function carregarDadosGestao(turmaId, alunoSelecionadoId = null) {
             </div>`).join('') || "<p style='font-size:0.85rem; color:#666;'>Nenhum agendamento.</p>";
     }
 
-    // 3. Se o professor clicou em um aluno, exibe pendências/corrigidas desse aluno específico
     const containerEntregas = document.getElementById('res-entregas-aluno');
     const tituloSecaoAluno = document.getElementById('titulo-secao-aluno');
 
@@ -411,7 +440,7 @@ async function carregarDadosGestao(turmaId, alunoSelecionadoId = null) {
         tituloSecaoAluno.innerText = `📝 Avaliações: ${alunoObj?.usuarios.nome.split(' ')[0]}`;
 
         const { data: entregasAluno } = await _supabase.from('progresso_aluno')
-            .select(`id, resposta_url, nota, feedback, cronograma(id, titulo, turma_id)')`)
+            .select(`id, resposta_url, nota, feedback, cronograma(id, titulo, turma_id)`)
             .eq('aluno_id', alunoSelecionadoId);
 
         if (!entregasAluno || entregasAluno.length === 0) {
@@ -436,20 +465,23 @@ async function carregarDadosGestao(turmaId, alunoSelecionadoId = null) {
 async function salvarCorrecao(progressoId, turmaId, alunoId) {
     let nota = document.getElementById(`n-${progressoId}`).value;
     const feedback = document.getElementById(`f-${progressoId}`).value;
-    if(!nota) return alert("Insira uma nota!");
+    if(!nota) {
+        await mostrarAlerta("Insira uma nota!", "Atenção");
+        return;
+    }
     nota = nota.replace(',', '.');
 
     const { error } = await _supabase.from('progresso_aluno').update({ nota, feedback }).eq('id', progressoId);
-    if (error) alert("Erro: " + error.message);
-    else {
-        alert("✅ Nota salva com sucesso!");
+    if (error) {
+        await mostrarAlerta("Erro: " + error.message, "Erro");
+    } else {
+        await mostrarAlerta("✅ Nota salva com sucesso!", "Sucesso");
         carregarDadosGestao(turmaId, alunoId); 
     }
 }
 
 async function abrirModalAgendar(turmaId, item = null) {
     const clone = document.getElementById('tpl-modal-agendar').content.cloneNode(true);
-    // Remove o campo de selecionar aluno individual do HTML do modal se ele existir
     const grpAluno = clone.querySelector('#ag-sel-aluno')?.closest('.form-group');
     if (grpAluno) grpAluno.style.display = 'none';
 
@@ -476,7 +508,7 @@ async function abrirModalAgendar(turmaId, item = null) {
             data_fim: document.getElementById('ag-d-fim').value, 
             hora_inicio: document.getElementById('ag-h1').value, 
             hora_fim: document.getElementById('ag-h2').value, 
-            aluno_id: null, // Sempre geral para a turma
+            aluno_id: null, 
             conteudo_estudo: document.getElementById('ag-conteudo').value, 
             link_material: document.getElementById('ag-link').value, 
             atividades_descricao: document.getElementById('ag-ativ-desc').value 
@@ -494,14 +526,12 @@ async function abrirModalAgendar(turmaId, item = null) {
 function editarAgendamento(item) { abrirModalAgendar(item.turma_id, item); }
 
 // =========================================================
-// 5. MÓDULO ALUNO (IMAGENS 8 e 9)
+// 5. MÓDULO ALUNO
 // =========================================================
 async function renderizarAluno() {
     carregarTela('tpl-dash-aluno');
     document.getElementById('txt-n-aluno').innerText = `Olá, ${usuarioLogado.nome}`;
     document.getElementById('btn-l-aluno').onclick = () => { localStorage.removeItem('usuarioSessao'); location.reload(); };
-    
-    // AGORA ABRE O MODAL CUSTOMIZADO EM VEZ DO PROMPT DO NAVEGADOR
     document.getElementById('btn-e-turma').onclick = abrirModalEntrarTurma;
 
     const { data: v } = await _supabase.from('turma_alunos').select('turma_id, turmas(nome, usuarios(nome))').eq('aluno_id', getID(usuarioLogado));
@@ -519,7 +549,6 @@ async function renderizarAluno() {
     }
 }
 
-
 function abrirModalEntrarTurma() {
     const clone = document.getElementById('tpl-modal-entrar-turma').content.cloneNode(true);
     document.body.appendChild(clone);
@@ -531,17 +560,18 @@ function abrirModalEntrarTurma() {
         e.preventDefault();
         const cod = document.getElementById('input-codigo-convite').value.toUpperCase().trim();
         
-        if (!cod) return alert("Digite um código válido.");
-
-        // Busca a turma pelo código de convite
-        const { data: turma, error } = await _supabase.from('turmas').select('id').eq('codigo_convite', cod).maybeSingle();
-
-        if (error || !turma) {
-            alert("Turma não encontrada. Verifique o código digitado.");
+        if (!cod) {
+            await mostrarAlerta("Digite um código válido.", "Atenção");
             return;
         }
 
-        // Verifica se o aluno já está matriculado nesta turma
+        const { data: turma, error } = await _supabase.from('turmas').select('id').eq('codigo_convite', cod).maybeSingle();
+
+        if (error || !turma) {
+            await mostrarAlerta("Turma não encontrada. Verifique o código digitado.", "Erro");
+            return;
+        }
+
         const { data: jaMatriculado } = await _supabase.from('turma_alunos')
             .select('id')
             .eq('turma_id', turma.id)
@@ -549,27 +579,25 @@ function abrirModalEntrarTurma() {
             .maybeSingle();
 
         if (jaMatriculado) {
-            alert("Você já está matriculado nesta turma!");
+            await mostrarAlerta("Você já está matriculado nesta turma!", "Aviso");
             modal.remove();
             return;
         }
 
-        // Insere a matrícula do aluno
         const { error: errMatricula } = await _supabase.from('turma_alunos').insert([{ 
             turma_id: turma.id, 
             aluno_id: getID(usuarioLogado) 
         }]);
 
         if (errMatricula) {
-            alert("Erro ao entrar na turma: " + errMatricula.message);
+            await mostrarAlerta("Erro ao entrar na turma: " + errMatricula.message, "Erro");
         } else {
-            alert("✅ Matrícula realizada com sucesso!");
+            await mostrarAlerta("✅ Matrícula realizada com sucesso!", "Sucesso");
             modal.remove();
             renderizarAluno();
         }
     };
 }
-
 
 async function verMateriaisAluno(id, nomeTurma, nomeProf) {
     carregarTela('tpl-materiais-aluno');
@@ -655,7 +683,10 @@ async function abrirDetalhesAluno(item, callbackAtualizar) {
     } else {
         modal.querySelector('#btn-enviar-estudo').onclick = async () => {
             const url = modal.querySelector('#link-estudante').value;
-            if(!url) return alert("Insira o link do seu trabalho!");
+            if(!url) {
+                await mostrarAlerta("Insira o link do seu trabalho!", "Atenção");
+                return;
+            }
             
             const { error } = await _supabase.from('progresso_aluno').upsert([{ 
                 aluno_id: getID(usuarioLogado), 
@@ -665,9 +696,10 @@ async function abrirDetalhesAluno(item, callbackAtualizar) {
                 data_conclusao: new Date().toISOString() 
             }], { onConflict: 'aluno_id, cronograma_id' });
             
-            if(error) alert("Erro: " + error.message); 
-            else { 
-                alert("Entrega realizada com sucesso!"); 
+            if(error) {
+                await mostrarAlerta("Erro: " + error.message, "Erro");
+            } else { 
+                await mostrarAlerta("Entrega realizada com sucesso!", "Sucesso"); 
                 modal.remove(); 
                 if(callbackAtualizar) callbackAtualizar();
             }

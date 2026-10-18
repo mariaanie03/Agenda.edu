@@ -372,3 +372,8 @@ footer {
     from { opacity: 0; transform: translateY(6px); } 
     to { opacity: 1; transform: translateY(0); } 
 }
+
+/* Garante que o modal de alerta fique sempre por cima de qualquer outro modal */
+.modal-overlay:has(#modal-alerta-titulo) {
+    z-index: 3000 !important;
+}
