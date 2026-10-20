@@ -436,13 +436,15 @@ async function selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, 
 
     containerAlunos.innerHTML = alunos.map(a => {
         const entregaAluno = entregas?.find(e => e.aluno_id === a.aluno_id);
-        let statusBadge = `<span style="font-size:0.75rem; color:#888;">Não enviado</span>`;
+        let statusBadge = `<span style="font-size:0.75rem; color:#888;">Pendente / Sem envio</span>`;
         
         if (entregaAluno) {
-            if (entregaAluno.nota !== null) {
+            if (entregaAluno.nota !== null && entregaAluno.nota !== undefined && entregaAluno.nota !== "") {
                 statusBadge = `<span style="background:#27ae60; color:white; padding:2px 8px; border-radius:6px; font-size:0.75rem;">Nota: ${entregaAluno.nota}</span>`;
+            } else if (entregaAluno.resposta_url) {
+                statusBadge = `<span style="background:#2980b9; color:white; padding:2px 8px; border-radius:6px; font-size:0.75rem;">Enviado (Aguardando)</span>`;
             } else {
-                statusBadge = `<span style="background:#f39c12; color:white; padding:2px 8px; border-radius:6px; font-size:0.75rem;">Aguardando correção</span>`;
+                statusBadge = `<span style="background:#f39c12; color:white; padding:2px 8px; border-radius:6px; font-size:0.75rem;">Em aberto</span>`;
             }
         }
 
@@ -456,7 +458,10 @@ async function selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, 
     }).join('');
 }
 
+
+
 async function abrirModalCorrecaoAluno(cronogramaId, cronogramaTitulo, alunoId, alunoNome) {
+    // 1. Busca o progresso/entrega do aluno no banco de dados
     const { data: entrega } = await _supabase.from('progresso_aluno')
         .select('*')
         .eq('cronograma_id', cronogramaId)
@@ -471,41 +476,81 @@ async function abrirModalCorrecaoAluno(cronogramaId, cronogramaTitulo, alunoId, 
     modal.querySelector('#mod-corr-aluno').innerText = `Estudante: ${alunoNome}`;
     
     const linkEl = modal.querySelector('#mod-corr-link');
-    if (entrega && entrega.resposta_url) {
+    const inputNota = modal.querySelector('#mod-corr-nota');
+    const inputFeedback = modal.querySelector('#mod-corr-feedback');
+    const btnSalvar = modal.querySelector('#form-corrigir-modal button[type="submit"]');
+
+    // VERIFICAÇÃO PRINCIPAL: O aluno enviou o trabalho?
+    const alunoEntregou = entrega && entrega.resposta_url && entrega.resposta_url.trim() !== "";
+
+    if (alunoEntregou) {
+        // Se o aluno ENTREGOU: Mostra o link e libera os campos de nota/feedback
         linkEl.href = entrega.resposta_url;
         linkEl.style.display = "block";
+        linkEl.innerText = "🔗 Abrir Link do Trabalho Enviado";
+        
+        inputNota.disabled = false;
+        inputFeedback.disabled = false;
+        btnSalvar.style.display = "block";
+        btnSalvar.disabled = false;
+        btnSalvar.style.background = "#27ae60";
+
+        // Preenche com a nota/feedback anteriores se já existirem
+        if (entrega.nota !== null && entrega.nota !== undefined) {
+            inputNota.value = entrega.nota;
+        }
+        if (entrega.feedback) {
+            inputFeedback.value = entrega.feedback;
+        }
     } else {
+        // Se o aluno NÃO ENTREGOU: Bloqueia o formulário e avisa o professor
         linkEl.href = "#";
-        linkEl.innerText = "O aluno ainda não enviou o link do trabalho.";
-        linkEl.style.background = "#95a5a6";
+        linkEl.innerText = "⚠️ O aluno ainda não realizou a entrega desta atividade.";
+        linkEl.style.background = "#e74c3c"; // Vermelho de alerta
         linkEl.style.pointerEvents = "none";
+
+        inputNota.disabled = true;
+        inputNota.placeholder = "Indisponível (Sem entrega)";
+        inputFeedback.disabled = true;
+        inputFeedback.placeholder = "O professor só pode corrigir após o envio do aluno.";
+        
+        // Esconde ou desativa o botão de salvar
+        btnSalvar.style.display = "none"; 
     }
 
-    if (entrega) {
-        if (entrega.nota !== null) modal.querySelector('#mod-corr-nota').value = entrega.nota;
-        if (entrega.feedback) modal.querySelector('#mod-corr-feedback').value = entrega.feedback;
-    }
-
+    // 2. Ação ao submeter (só permitida se houver entrega)
     modal.querySelector('#form-corrigir-modal').onsubmit = async (e) => {
         e.preventDefault();
-        let nota = modal.querySelector('#mod-corr-nota').value.replace(',', '.');
-        const feedback = modal.querySelector('#mod-corr-feedback').value;
+        
+        if (!alunoEntregou) {
+            await mostrarAlerta("Não é possível corrigir uma atividade que o aluno ainda não entregou.", "Atenção");
+            return;
+        }
 
-        if (entrega) {
-            await _supabase.from('progresso_aluno').update({ nota, feedback }).eq('id', entrega.id);
-        } else {
-            await _supabase.from('progresso_aluno').insert([{
-                cronograma_id: cronogramaId,
-                aluno_id: alunoId,
-                nota,
-                feedback,
-                concluido: true
-            }]);
+        let notaStr = inputNota.value;
+        if (notaStr === "" || notaStr === null) {
+            await mostrarAlerta("Por favor, informe uma nota.", "Atenção");
+            return;
+        }
+        let nota = parseFloat(notaStr.replace(',', '.'));
+        const feedback = inputFeedback.value;
+
+        const { error } = await _supabase.from('progresso_aluno').update({ 
+            nota: nota, 
+            feedback: feedback 
+        }).eq('id', entrega.id);
+
+        if (error) {
+            await mostrarAlerta("Erro ao atualizar correção: " + error.message, "Erro");
+            return;
         }
 
         await mostrarAlerta("✅ Correção salva com sucesso!", "Sucesso");
         modal.remove();
-        selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, usuarioLogado.turma_atual_id);
+        
+        if (typeof selecionarCronogramaParaCorrecao === 'function' && usuarioLogado.turma_atual_id) {
+            selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, usuarioLogado.turma_atual_id);
+        }
     };
 
     modal.querySelector('#btn-fechar-mod-corr').onclick = () => modal.remove();
@@ -640,6 +685,9 @@ function editarAgendamento(item) { abrirModalAgendar(item.turma_id, item); }
 // =========================================================
 // 5. MÓDULO ALUNO (ATUALIZADO)
 // =========================================================
+// =========================================================
+// 5. MÓDULO ALUNO (ATUALIZADO COM BOTÃO DE SAIR DA TURMA)
+// =========================================================
 async function renderizarAluno() {
     carregarTela('tpl-dash-aluno');
     document.getElementById('txt-n-aluno').innerText = `Olá, ${usuarioLogado.nome}`;
@@ -649,7 +697,7 @@ async function renderizarAluno() {
     // Buscando as turmas e incluindo a coluna 'disciplina' no select
     const { data: v } = await _supabase
         .from('turma_alunos')
-        .select('turma_id, turmas(nome, disciplina, usuarios(nome))')
+        .select('id, turma_id, turmas(nome, disciplina, usuarios(nome))')
         .eq('aluno_id', getID(usuarioLogado));
     
     const containerTurmasAluno = document.getElementById('lista-turmas-aluno');
@@ -658,8 +706,14 @@ async function renderizarAluno() {
         containerTurmasAluno.innerHTML = "<p style='grid-column:1/-1; color:#666;'>Você ainda não está matriculado em nenhuma turma.</p>";
     } else {
         containerTurmasAluno.innerHTML = v.map(x => `
-            <div class="card-item" style="border-top-color:#2980b9;">
-                <h3 style="margin-bottom: 5px;">${x.turmas.nome}</h3>
+            <div class="card-item card-turma-aluno" style="border-top-color:#2980b9; position: relative;">
+                
+                <!-- Botão de Sair da Turma (Estilizado no canto superior direito) -->
+                <button onclick="sairDaTurma(${x.id}, '${x.turmas.nome}')" class="btn-sair-turma" title="Sair da turma">
+                    🚪 Sair da turma
+                </button>
+
+                <h3 style="margin-bottom: 5px; padding-right: 70px;">${x.turmas.nome}</h3>
                 
                 <!-- Exibição da Disciplina -->
                 <p style="font-size: 0.85rem; color: var(--dark-green); font-weight: bold; margin-bottom: 8px;">
@@ -672,6 +726,27 @@ async function renderizarAluno() {
                 
                 <button onclick="verMateriaisAluno(${x.turma_id}, '${x.turmas.nome}', '${x.turmas.usuarios?.nome || ''}')" class="btn-enviar" style="background:#2980b9; padding:10px; font-size:0.9rem; width:100%;">Acessar turma</button>
             </div>`).join('');
+    }
+}
+
+// Nova função para processar a saída do aluno da turma
+async function sairDaTurma(relacaoId, nomeTurma) {
+    const confirmou = await mostrarAlerta(
+        `Tem certeza de que deseja sair da turma "${nomeTurma}"? Você perderá o acesso aos materiais e notas até entrar novamente com o código.`, 
+        "Sair da Turma"
+    );
+
+    // Como o nosso modal de alerta retorna uma Promise simples sem booleano de confirmação nativo, 
+    // vamos usar o confirm padrão do navegador para garantir a segurança da exclusão:
+    if (window.confirm(`Deseja realmente sair da turma "${nomeTurma}"?`)) {
+        const { error } = await _supabase.from('turma_alunos').delete().eq('id', relacaoId);
+        
+        if (error) {
+            await mostrarAlerta("Erro ao sair da turma: " + error.message, "Erro");
+        } else {
+            await mostrarAlerta("Você saiu da turma com sucesso.", "Sucesso");
+            renderizarAluno();
+        }
     }
 }
 
@@ -739,17 +814,25 @@ async function verMateriaisAluno(id, nomeTurma, nomeProf) {
         
         let listaFiltrada = ag || [];
         if (filtro === 'pendente') {
-            listaFiltrada = ag.filter(a => !progresso?.some(p => p.cronograma_id === a.id && p.nota !== null));
+            // Considera pendente se não tem registro OU se tem registro mas a resposta_url está vazia/nula
+            listaFiltrada = ag.filter(a => {
+                const p = progresso?.find(x => x.cronograma_id === a.id);
+                return !p || !p.resposta_url || p.resposta_url.trim() === "";
+            });
         } else if (filtro === 'concluido') {
-            listaFiltrada = ag.filter(a => progresso?.some(p => p.cronograma_id === a.id && p.nota !== null));
+            listaFiltrada = ag.filter(a => {
+                const p = progresso?.find(x => x.cronograma_id === a.id);
+                return p && p.resposta_url && p.resposta_url.trim() !== "";
+            });
         }
 
         containerCronograma.innerHTML = listaFiltrada.map(a => {
             const p = progresso?.find(x => x.cronograma_id === a.id);
             let badgeNota = `<span style="background:#eee; color:#666; padding:3px 8px; border-radius:6px; font-size:0.75rem;">Pendente</span>`;
-            if (p && p.nota !== null) {
+            
+            if (p && p.nota !== null && p.nota !== undefined) {
                 badgeNota = `<span style="background:#27ae60; color:white; padding:3px 8px; border-radius:6px; font-size:0.75rem; font-weight:bold;">Nota: ${p.nota}</span>`;
-            } else if (p && p.concluido) {
+            } else if (p && p.resposta_url && p.resposta_url.trim() !== "") {
                 badgeNota = `<span style="background:#f39c12; color:white; padding:3px 8px; border-radius:6px; font-size:0.75rem;">Aguardando correção</span>`;
             }
 
@@ -783,7 +866,7 @@ async function abrirDetalhesAluno(item, callbackAtualizar) {
     const modal = document.querySelector('.modal-overlay');
     
     modal.querySelector('#det-titulo').innerText = item.titulo;
-    modal.querySelector('#det-data').innerText = `📅 Dia: ${item.data || '---'} | ⏰ ${item.hora_inicio || '--:--'} às ${item.hora_fim || '--:--'}`;
+    modal.querySelector('#det-data').innerText = `📅 Prazo: ${item.data || '---'} até ${item.data_fim || item.data || '---'} | ⏰ ${item.hora_inicio || '--:--'} às ${item.hora_fim || '--:--'}`;
     modal.querySelector('#det-conteudo').innerText = item.conteudo_estudo || "Nenhum conteúdo descrito.";
     modal.querySelector('#det-atividades').innerText = item.atividades_descricao || "Nenhuma instrução específica.";
 
@@ -793,37 +876,97 @@ async function abrirDetalhesAluno(item, callbackAtualizar) {
     }
 
     const secaoEntrega = modal.querySelector('#secao-entrega');
-    const { data: entrega } = await _supabase.from('progresso_aluno').select('*').eq('aluno_id', getID(usuarioLogado)).eq('cronograma_id', item.id).maybeSingle();
+    
+    // Busca a entrega do aluno para este cronograma específico
+    const { data: entrega } = await _supabase.from('progresso_aluno')
+        .select('*')
+        .eq('aluno_id', getID(usuarioLogado))
+        .eq('cronograma_id', item.id)
+        .maybeSingle();
 
-    if (entrega) {
+    // Verifica se o aluno realmente enviou um link válido (evita registros fantasmas)
+    const jaEnviouDeVerdade = entrega && entrega.resposta_url && entrega.resposta_url.trim() !== "";
+
+    // VERIFICAÇÃO DE PRAZO (DATA DE ENCERRAMENTO)
+    let prazoExpirado = false;
+    if (item.data_fim) {
+        const horaFim = item.hora_fim ? item.hora_fim : "23:59:59";
+        const dataLimiteStr = `${item.data_fim}T${horaFim}`;
+        const dataLimite = new Date(dataLimiteStr);
+        const agora = new Date();
+
+        if (agora > dataLimite) {
+            prazoExpirado = true;
+        }
+    }
+
+    if (jaEnviouDeVerdade) {
+        // Se já enviou, mostra o status da entrega e a nota (se houver)
         secaoEntrega.innerHTML = `
             <div style="background: #fafffa; padding: 15px; border-radius: 10px; border: 1px solid #27ae60;">
                 <p style="color: #27ae60; font-weight: bold; margin-bottom:5px;">✓ Atividade Entregue</p>
                 <a href="${entrega.resposta_url}" target="_blank" style="font-size: 0.85rem; color: #2980b9; display:block; margin-bottom:10px;">🔗 Ver arquivo enviado</a>
-                ${entrega.nota !== null ? `
+                ${entrega.nota !== null && entrega.nota !== undefined ? `
                     <p style="font-size: 1.1rem; color: #27ae60; font-weight:bold;">Nota: ${entrega.nota}</p>
                     <p style="font-style: italic; font-size: 0.85rem; color: #555; margin-top:5px;">Feedback: "${entrega.feedback || 'Sem comentários'}"</p>
                 ` : `<p style="font-size: 0.85rem; color: #f39c12; font-weight:bold;">Aguardando correção do professor...</p>`}
             </div>
         `;
+    } else if (prazoExpirado) {
+        // Se NÃO enviou e o PRAZO EXPIROU: Bloqueia o envio
+        secaoEntrega.innerHTML = `
+            <div style="background: #fdf3f2; padding: 15px; border-radius: 10px; border: 1px solid #e74c3c; text-align: center;">
+                <p style="color: #c0392b; font-weight: bold; margin-bottom: 5px;">⏳ Prazo Encerrado</p>
+                <p style="font-size: 0.85rem; color: #555;">A data limite para a entrega desta atividade expirou. Não é mais possível enviar trabalhos.</p>
+            </div>
+        `;
     } else {
+        // Se NÃO enviou e o prazo ainda está válido: Libera a caixa de envio limpa
+        secaoEntrega.innerHTML = `
+            <h4 style="color: #27ae60; margin-bottom: 8px; font-size: 0.95rem;">📤 Enviar Trabalho</h4>
+            <input type="url" id="link-estudante" placeholder="https://link-do-seu-trabalho.com" style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; margin-bottom: 10px; font-size:0.9rem;">
+            <button type="button" id="btn-enviar-estudo" class="btn-enviar" style="background: #27ae60;">Confirmar Entrega</button>
+        `;
+
         modal.querySelector('#btn-enviar-estudo').onclick = async () => {
+            // Checagem de segurança extra no momento do clique
+            if (item.data_fim) {
+                const horaFim = item.hora_fim ? item.hora_fim : "23:59:59";
+                if (new Date() > new Date(`${item.data_fim}T${horaFim}`)) {
+                    await mostrarAlerta("O prazo de entrega desta atividade já expirou!", "Atenção");
+                    modal.remove();
+                    if(callbackAtualizar) callbackAtualizar();
+                    return;
+                }
+            }
+
             const url = modal.querySelector('#link-estudante').value;
-            if(!url) {
+            if(!url || url.trim() === "") {
                 await mostrarAlerta("Insira o link do seu trabalho!", "Atenção");
                 return;
             }
             
-            const { error } = await _supabase.from('progresso_aluno').upsert([{ 
-                aluno_id: getID(usuarioLogado), 
-                cronograma_id: item.id, 
-                resposta_url: url, 
-                concluido: true, 
-                data_conclusao: new Date().toISOString() 
-            }], { onConflict: 'aluno_id, cronograma_id' });
+            let error;
+            if (entrega && entrega.id) {
+                const res = await _supabase.from('progresso_aluno').update({ 
+                    resposta_url: url, 
+                    concluido: true, 
+                    data_conclusao: new Date().toISOString() 
+                }).eq('id', entrega.id);
+                error = res.error;
+            } else {
+                const res = await _supabase.from('progresso_aluno').insert([{ 
+                    aluno_id: getID(usuarioLogado), 
+                    cronograma_id: item.id, 
+                    resposta_url: url, 
+                    concluido: true, 
+                    data_conclusao: new Date().toISOString() 
+                }]);
+                error = res.error;
+            }
             
             if(error) {
-                await mostrarAlerta("Erro: " + error.message, "Erro");
+                await mostrarAlerta("Erro ao enviar: " + error.message, "Erro");
             } else { 
                 await mostrarAlerta("Entrega realizada com sucesso!", "Sucesso"); 
                 modal.remove(); 
@@ -831,9 +974,9 @@ async function abrirDetalhesAluno(item, callbackAtualizar) {
             }
         };
     }
+    
     modal.querySelector('#btn-fechar-detalhes').onclick = () => modal.remove();
 }
-
 // =========================================================
 // 6. FUNÇÕES AUXILIARES
 // =========================================================
@@ -845,6 +988,114 @@ async function excluirItem(id, tabela, turmaId) {
 }
 
 
+// =========================================================
+// 7. SISTEMA DE PALETA DE CORES FIXAS
+// =========================================================
+
+const paletasDeCores = {
+    padrao: {
+        dark: '#0d2e1a',
+        logo: '#215e38',
+        sidebar: '#e6ede0',
+        bg: '#f9fbf6'
+    },
+    rosa: {
+        dark: '#4a1525',
+        logo: '#be185d',
+        sidebar: '#fce7f3',
+        bg: '#fff1f2'
+    },
+    vermelho: {
+        dark: '#450a0a',
+        logo: '#dc2626',
+        sidebar: '#fee2e2',
+        bg: '#fef2f2'
+    },
+    roxo: {
+        dark: '#3b0764',
+        logo: '#7e22ce',
+        sidebar: '#f3e8ff',
+        bg: '#faf5ff'
+    },
+    laranja: {
+        dark: '#431407',
+        logo: '#ea580c',
+        sidebar: '#ffedd5',
+        bg: '#fff7ed'
+    },
+    azul: {
+        dark: '#0e2a47',
+        logo: '#1d4ed8',
+        sidebar: '#e0f2fe',
+        bg: '#f0f9ff'
+    },
+    amarelo: {
+        dark: '#451a03',
+        logo: '#ca8a04',
+        sidebar: '#fef9c3',
+        bg: '#fefce8'
+    },
+    cinza: {
+        dark: '#1e293b',
+        logo: '#475569',
+        sidebar: '#f1f5f9',
+        bg: '#f8fafc'
+    },
+    preto: {
+        dark: '#000000',
+        logo: '#27272a',
+        sidebar: '#e4e4e7',
+        bg: '#f4f4f5'
+    },
+    marrom: {
+        dark: '#451a03',
+        logo: '#78350f',
+        sidebar: '#f5ebe0',
+        bg: '#fdfbf7'
+    },
+    bege: {
+        dark: '#5c4033',
+        logo: '#a39171',
+        sidebar: '#f3ece1',
+        bg: '#faf7f2'
+    },
+    bordo: {
+        dark: '#38040e',
+        logo: '#581c87',
+        sidebar: '#f5d0fe',
+        bg: '#fdf4ff'
+    }
+};
+
+function aplicarTemaFixo(nomeTema, salvar = false) {
+    const paleta = paletasDeCores[nomeTema] || paletasDeCores.padrao;
+    const root = document.documentElement;
+
+    root.style.setProperty('--dark-green', paleta.dark);
+    root.style.setProperty('--logo-green', paleta.logo);
+    root.style.setProperty('--sidebar-green', paleta.sidebar);
+    root.style.setProperty('--main-bg', paleta.bg);
+
+    if (salvar) {
+        localStorage.setItem('agendaEduTemaFixo', nomeTema);
+    }
+}
+
+// Inicialização: Se o usuário já escolheu antes, aplica. Senão, mantém o verde padrão original.
+document.addEventListener('DOMContentLoaded', () => {
+    const temaSalvo = localStorage.getItem('agendaEduTemaFixo');
+    if (temaSalvo) {
+        aplicarTemaFixo(temaSalvo, false);
+    }
+
+    // Evento de clique nos botões da paleta fixa
+    document.addEventListener('click', (e) => {
+        if (e.target && e.target.classList.contains('btn-cor-tema')) {
+            const tema = e.target.getAttribute('data-tema');
+            aplicarTemaFixo(tema, true);
+        }
+    });
+});
 
 
 btnHome.onclick = () => { renderizarHome(); if (usuarioLogado) btnLoginMenu.textContent = "Meu painel"; };

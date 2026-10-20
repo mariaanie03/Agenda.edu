@@ -3,7 +3,7 @@
     --logo-green: #215e38;       /* Verde intermediário de destaque */
     --sidebar-green: #e6ede0;    /* Verde claro acinzentado do menu lateral das imagens */
     --main-bg: #f9fbf6;          /* Fundo geral da página (bege/creme muito suave) */
-    --gold: #d4af37;             /* Tom dourado refinado para detalhes e títulos */
+    --gold: #ce9914;             /* Tom dourado refinado para detalhes e títulos */
     --white: #ffffff;            /* Branco puro dos cards */
     --shadow: 0 4px 20px rgba(0,0,0,0.05); /* Sombra leve e elegante */
 }
@@ -365,6 +365,8 @@ footer {
     border-top: 3px solid #d4af37; 
     font-size: 0.8rem; 
     margin-top: auto; 
+    display: flex;
+    justify-content: space-around;
 }
 
 .fade-in { animation: fadeIn 0.3s ease; }
@@ -376,4 +378,221 @@ footer {
 /* Garante que o modal de alerta fique sempre por cima de qualquer outro modal */
 .modal-overlay:has(#modal-alerta-titulo) {
     z-index: 3000 !important;
+}
+
+
+/* Estilo para o botão de sair da turma na área do aluno */
+.card-turma-aluno {
+    position: relative;
+}
+
+.btn-sair-turma {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background-color:var(--logo-green); /* Verde escuro elegante */
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.1s ease;
+    box-shadow: 0 2px 5px rgba(0, 255, 136, 0.1);
+}
+
+.btn-sair-turma:hover {
+    background-color: var(--gold); /* Tom de verde um pouco mais claro no hover */
+    transform: translateY(-1px);
+}
+
+
+/* =========================================================
+   RESPONSIVIDADE GLOBAL PARA TODOS OS DISPOSITIVOS
+   ========================================================= */
+
+/* Ajustes para Tablets e Telas Médias (abaixo de 1024px) */
+@media (max-width: 1024px) {
+    header {
+        padding: 15px 20px;
+    }
+    header h1 {
+        font-size: 2.2rem;
+    }
+    main {
+        padding: 20px;
+    }
+    .home-layout {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+    }
+    .home-texto {
+        max-width: 100%;
+    }
+    .home-botoes {
+        justify-content: center;
+    }
+    .home-card-preview {
+        max-width: 100%;
+    }
+    .gestao-container-professor {
+        grid-template-columns: 1fr !important; /* Empilha os blocos de gestão do professor */
+    }
+}
+
+/* Ajustes para Celulares e Telas Pequenas (abaixo de 768px) */
+@media (max-width: 768px) {
+    /* Transforma o menu lateral fixo em uma barra de navegação superior compacta */
+    .container {
+        flex-direction: column;
+    }
+    aside {
+        width: 100%;
+        padding: 15px 10px;
+        border-right: none;
+        border-bottom: 1px solid #d5e0cc;
+    }
+    aside h2 {
+        display: none; /* Oculta o título "MENU" para economizar espaço vertical */
+    }
+    aside nav ul {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+    }
+    aside nav ul li a {
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: 8px;
+    }
+    aside nav ul li a:hover {
+        padding-left: 12px; /* Remove o deslocamento lateral exagerado em telas mobile */
+    }
+
+    /* Ajustes gerais de tipografia e espaçamento em celulares */
+    header h1 {
+        font-size: 1.8rem;
+        margin-left: 10px;
+    }
+    .logo-box {
+        width: 35px;
+        height: 35px;
+    }
+    .home-texto h2 {
+        font-size: 2.3rem;
+    }
+    main {
+        padding: 15px;
+    }
+    .login-card {
+        padding: 20px;
+        max-width: 100%;
+    }
+    .dash-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    .dash-nav-btns {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .dash-nav-btns input {
+        width: 100% !important;
+    }
+    .grid-cards {
+        grid-template-columns: 1fr; /* 1 card por linha em celulares */
+    }
+}
+
+/* Ajustes finos para celulares muito estreitos (abaixo de 480px) */
+@media (max-width: 480px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+    .home-texto h2 {
+        font-size: 1.9rem;
+    }
+    .home-botoes {
+        flex-direction: column;
+    }
+    .home-botoes button {
+        width: 100% !important;
+    }
+}
+
+/* =========================================================
+   SELETOR DE PALETA DE CORES FIXAS
+   ========================================================= */
+
+.seletor-tema-box {
+    margin-top: auto; 
+    padding: 15px;
+    border-top: 1px solid #d5e0cc;
+    position: absolute;
+    bottom: 0;
+    width: 260px;
+    background-color: var(--sidebar-green);
+}
+
+.seletor-tema-box label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: var(--dark-green);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.grid-paleta-cores {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+}
+
+.btn-cor-tema {
+    border: 1px solid rgba(255,255,255,0.4);
+    padding: 6px 4px;
+    font-size: 0.65rem;
+    font-weight: bold;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.btn-cor-tema:hover {
+    transform: scale(1.05);
+    opacity: 0.9;
+}
+
+/* Garante que o aside tenha posição relativa para o seletor fixar embaixo */
+aside {
+    position: relative;
+    min-height: calc(100vh - 81px);
+    display: flex;
+    flex-direction: column;
+}
+
+/* Responsividade para celulares */
+@media (max-width: 768px) {
+    .seletor-tema-box {
+        position: static;
+        width: 100%;
+        margin-top: 15px;
+        padding: 10px;
+        border-top: none;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.4);
+    }
+    aside {
+        min-height: auto;
+    }
 }

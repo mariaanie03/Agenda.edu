@@ -18,7 +18,7 @@
     </header>
 
     <div class="container">
-        <aside>
+       <aside>
             <h2>MENU</h2>
             <nav>
                 <ul>
@@ -26,6 +26,25 @@
                     <li><a href="#" id="btn-login">👤 Login / cadastro</a></li>
                 </ul>
             </nav>
+            
+            <!-- SELETOR DE CORES FIXAS -->
+            <div class="seletor-tema-box">
+                <label>🎨 Tema do Portal</label>
+                <div class="grid-paleta-cores">
+                    <button class="btn-cor-tema" data-tema="padrao" style="background: #0d2e1a;" title="Padrão (Verde)">Padrão</button>
+                    <button class="btn-cor-tema" data-tema="rosa" style="background: #be185d;" title="Rosa">Rosa</button>
+                    <button class="btn-cor-tema" data-tema="vermelho" style="background: #dc2626;" title="Vermelho">Vermelho</button>
+                    <button class="btn-cor-tema" data-tema="roxo" style="background: #7e22ce;" title="Roxo">Roxo</button>
+                    <button class="btn-cor-tema" data-tema="laranja" style="background: #ea580c;" title="Laranja">Laranja</button>
+                    <button class="btn-cor-tema" data-tema="azul" style="background: #1d4ed8;" title="Azul">Azul</button>
+                    <button class="btn-cor-tema" data-tema="amarelo" style="background: #ca8a04; color: #000;" title="Amarelo">Amarelo</button>
+                    <button class="btn-cor-tema" data-tema="cinza" style="background: #475569;" title="Cinza">Cinza</button>
+                    <button class="btn-cor-tema" data-tema="preto" style="background: #020617;" title="Preto">Preto</button>
+                    <button class="btn-cor-tema" data-tema="marrom" style="background: #78350f;" title="Marrom">Marrom</button>
+                    <button class="btn-cor-tema" data-tema="bege" style="background: #a39171; color: #000;" title="Bege">Bege</button>
+                    <button class="btn-cor-tema" data-tema="bordo" style="background: #581c87;" title="Vermelho Bordo">Bordo</button>
+                </div>
+            </div>
         </aside>
         <main id="conteudo-principal"></main>
     </div>
@@ -388,7 +407,8 @@
         </div>
     </template>
 
-    <footer><p>&copy; Agenda.edu. Todos os direitos reservados. Organize hoje. Aprenda sempre.</p></footer>
+    <footer><p>&copy; Agenda.edu. Todos os direitos reservados.</p>
+         <p>Organize hoje. Aprenda sempre.</p></footer>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/SupaBaseClientes.js"></script>
