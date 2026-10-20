@@ -224,6 +224,9 @@ function mostrarValidacaoPin(email, pinCorreto, nome, tipo, senha) {
 // =========================================================
 // 4. MÓDULO PROFESSOR 
 // =========================================================
+// =========================================================
+// 4. MÓDULO PROFESSOR (ATUALIZADO)
+// =========================================================
 async function renderizarProfessor() {
     carregarTela('tpl-dash-professor');
     document.getElementById('txt-n-prof').innerText = `Olá, ${usuarioLogado.nome}`;
@@ -242,8 +245,14 @@ async function renderizarProfessor() {
         }
         container.innerHTML = listaFiltrada.map(t => `
             <div class="card-item">
-                <h3>${t.nome}</h3>
-                <span class="info-tag">Código: ${t.codigo_convite}</span>
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <h3 style="margin-bottom: 5px;">${t.nome}</h3>
+                    <div style="display:flex; gap: 5px;">
+                        <button onclick="editarTurma(${t.id}, '${t.nome}')" title="Editar nome" style="border:none; background:none; cursor:pointer; font-size: 1rem;">✏️</button>
+                        <button onclick="excluirTurma(${t.id})" title="Excluir turma" style="border:none; background:none; cursor:pointer; font-size: 1rem;">🗑️</button>
+                    </div>
+                </div>
+                <span class="info-tag" style="font-size:0.8rem; color:#666;">Código: ${t.codigo_convite}</span>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
                     <button onclick="gerenciarTurma(${t.id}, '${t.nome}')" class="btn-enviar" style="padding: 10px; font-size: 0.9rem; background: var(--dark-green);">Corrigir cronogramas</button>
                     <button onclick="abrirModalAgendar(${t.id})" class="btn-cancelar" style="margin-top: 0; padding: 10px; font-size: 0.9rem; background: #e2ebd8; color: var(--dark-green); font-weight: bold;">Propor cronogramas</button>
@@ -259,6 +268,68 @@ async function renderizarProfessor() {
         desenharTurmas(filtradas);
     };
 }
+
+// =========================================================
+// FUNÇÕES DE SUPORTE PARA A TELA DO PROFESSOR
+// =========================================================
+
+// Função para abrir o modal estilizado
+function abrirModalAcao(titulo, texto, tipo, onConfirm, valorAtual = "") {
+    const clone = document.getElementById('tpl-modal-acao-turma').content.cloneNode(true);
+    document.body.appendChild(clone);
+    const modal = document.querySelector('.modal-overlay');
+    
+    modal.querySelector('#mod-acao-titulo').innerText = titulo;
+    modal.querySelector('#mod-acao-texto').innerText = texto;
+    
+    const campo = modal.querySelector('#mod-acao-campo');
+    const input = modal.querySelector('#input-novo-nome');
+    
+    if (tipo === 'editar') {
+        campo.style.display = 'block';
+        input.value = valorAtual;
+    }
+
+    modal.querySelector('#btn-confirmar-acao').onclick = async () => {
+        const valor = input.value;
+        await onConfirm(valor);
+        modal.remove();
+    };
+
+    modal.querySelector('#btn-cancelar-acao').onclick = () => modal.remove();
+}
+
+// Chamada da Edição
+function editarTurma(turmaId, nomeAtual) {
+    abrirModalAcao(
+        "Editar Turma", 
+        "Altere o nome da sua turma abaixo:", 
+        "editar", 
+        async (novoNome) => {
+            if (novoNome && novoNome !== nomeAtual) {
+                await _supabase.from('turmas').update({ nome: novoNome }).eq('id', turmaId);
+                renderizarProfessor();
+            }
+        }, 
+        nomeAtual
+    );
+}
+
+// Chamada da Exclusão
+function excluirTurma(turmaId) {
+    abrirModalAcao(
+        "Excluir Turma", 
+        "Tem certeza que deseja excluir esta turma? Esta ação não pode ser desfeita.", 
+        "excluir", 
+        async () => {
+            await _supabase.from('turmas').delete().eq('id', turmaId);
+            renderizarProfessor();
+        }
+    );
+}
+
+
+
 
 function abrirModalCriarTurma() {
     document.body.appendChild(document.getElementById('tpl-modal-criar-turma').content.cloneNode(true));
@@ -717,6 +788,9 @@ async function excluirItem(id, tabela, turmaId) {
         carregarDadosGestao(turmaId);
     }
 }
+
+
+
 
 btnHome.onclick = () => { renderizarHome(); if (usuarioLogado) btnLoginMenu.textContent = "Meu painel"; };
 btnLoginMenu.onclick = renderizarDashboard;

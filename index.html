@@ -190,6 +190,25 @@
 </template>
 
 
+<!-- MODAL DE EDIÇÃO/EXCLUSÃO (GENÉRICO) -->
+<template id="tpl-modal-acao-turma">
+    <div class="modal-overlay">
+        <div class="login-card fade-in" style="max-width: 400px; text-align: center;">
+            <h3 id="mod-acao-titulo" style="color: var(--dark-green); margin-bottom: 20px;">Título</h3>
+            <div id="mod-acao-campo" class="form-group" style="display:none;">
+                <label>Novo nome:</label>
+                <input type="text" id="input-novo-nome" style="width:100%; padding:10px;">
+            </div>
+            <p id="mod-acao-texto" style="margin-bottom: 20px;"></p>
+            <div style="display:flex; gap:10px;">
+                <button type="button" id="btn-confirmar-acao" class="btn-enviar">Confirmar</button>
+                <button type="button" id="btn-cancelar-acao" class="btn-cancelar" style="margin-top:0;">Cancelar</button>
+            </div>
+        </div>
+    </div>
+</template>
+
+
                 <!-- MODAL DE CORREÇÃO POR ALUNO / CRONOGRAMA -->
 <template id="tpl-modal-corrigir-atividade">
     <div class="modal-overlay">
