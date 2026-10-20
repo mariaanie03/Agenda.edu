@@ -190,19 +190,73 @@
 </template>
 
 
+    <!-- MODAL CRIAR TURMA -->
+    <template id="tpl-modal-criar-turma">
+        <div class="modal-overlay">
+            <div class="login-card fade-in" style="max-width: 480px;">
+                <div class="avatar-topo">📖</div>
+                <h3 style="color:var(--dark-green); margin-bottom:5px; text-align:center;">Criar nova turma</h3>
+                <p style="text-align:center; font-size:0.8rem; color:#666; margin-bottom:20px;">Defina um nome. O código de acesso será gerado automaticamente.</p>
+                <form id="form-criar-turma">
+                    <div class="form-group"><label>Nome da turma</label><input type="text" id="turma-nome" required></div>
+                    <div class="form-group"><label>Disciplina</label><input type="text" id="turma-disciplina"></div>
+                    <div class="form-group"><label>Ano Letivo</label><input type="text" id="turma-ano"></div>
+                    <div class="form-group"><label>Detalhes</label><textarea id="turma-detalhes" rows="2"></textarea></div>
+                    <button type="submit" class="btn-enviar">Criar turma</button>
+                    <button type="button" id="btn-cancelar-turma" class="btn-cancelar">Cancelar</button>
+                </form>
+
+            </div>
+        </div>
+    </template>
+
+    <!-- MODAL AGENDAR / NOVA ATIVIDADE -->
+    <template id="tpl-modal-agendar">
+        <div class="modal-overlay">
+            <div class="login-card fade-in" style="max-width: 550px;">
+                <h3 style="text-align: center; margin-bottom: 20px; color: var(--dark-green);">Nova Atividade / Cronograma</h3>
+                <form id="form-ag">
+                    <div class="form-group"><label>Título:</label><input type="text" id="ag-t" required placeholder="Ex: Pesquisa de referências"></div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group"><label>Data Início:</label><input type="date" id="ag-d-ini" required></div>
+                        <div class="form-group"><label>Data Fim:</label><input type="date" id="ag-d-fim" required></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                        <div class="form-group"><label>Hora Início:</label><input type="time" id="ag-h1" required></div>
+                        <div class="form-group"><label>Hora Fim:</label><input type="time" id="ag-h2" required></div>
+                    </div>
+                    <div class="form-group"><label>📖 Conteúdo a estudar:</label><textarea id="ag-conteudo" rows="2" placeholder="Descrição..."></textarea></div>
+                    <div class="form-group"><label>🔗 Link de apoio:</label><input type="url" id="ag-link" placeholder="https://..."></div>
+                    <div class="form-group"><label>📝 Atividades a desenvolver:</label><textarea id="ag-ativ-desc" rows="2" placeholder="Descrição da entrega..."></textarea></div>
+                    <div class="form-group">
+                        <label>👤 Destinatário:</label>
+                        <select id="ag-sel-aluno">
+                            <option value="geral">Geral (Toda a Turma)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-enviar">Salvar Atividade</button>
+                    <button type="button" id="btn-f-agenda" class="btn-cancelar">Cancelar</button>
+                </form>
+            </div>
+        </div>
+    </template>
+
+
 <!-- MODAL DE EDIÇÃO/EXCLUSÃO (GENÉRICO) -->
 <template id="tpl-modal-acao-turma">
     <div class="modal-overlay">
-        <div class="login-card fade-in" style="max-width: 400px; text-align: center;">
-            <h3 id="mod-acao-titulo" style="color: var(--dark-green); margin-bottom: 20px;">Título</h3>
-            <div id="mod-acao-campo" class="form-group" style="display:none;">
-                <label>Novo nome:</label>
-                <input type="text" id="input-novo-nome" style="width:100%; padding:10px;">
+        <div class="login-card fade-in" style="max-width: 450px;">
+            <h3 id="mod-acao-titulo" style="color: var(--dark-green); margin-bottom: 15px;">Editar Turma</h3>
+            <div id="mod-campos-edicao" style="display:none;">
+                <div class="form-group"><label>Nome:</label><input type="text" id="edit-nome"></div>
+                <div class="form-group"><label>Disciplina:</label><input type="text" id="edit-disciplina"></div>
+                <div class="form-group"><label>Ano Letivo:</label><input type="text" id="edit-ano"></div>
+                <div class="form-group"><label>Detalhes:</label><textarea id="edit-detalhes"></textarea></div>
             </div>
-            <p id="mod-acao-texto" style="margin-bottom: 20px;"></p>
+            <p id="mod-acao-texto"></p>
             <div style="display:flex; gap:10px;">
                 <button type="button" id="btn-confirmar-acao" class="btn-enviar">Confirmar</button>
-                <button type="button" id="btn-cancelar-acao" class="btn-cancelar" style="margin-top:0;">Cancelar</button>
+                <button type="button" id="btn-cancelar-acao" class="btn-cancelar">Cancelar</button>
             </div>
         </div>
     </div>
@@ -304,52 +358,7 @@
         </div>
     </template>
 
-    <!-- MODAL CRIAR TURMA -->
-    <template id="tpl-modal-criar-turma">
-        <div class="modal-overlay">
-            <div class="login-card fade-in" style="max-width: 480px;">
-                <div class="avatar-topo">📖</div>
-                <h3 style="color:var(--dark-green); margin-bottom:5px; text-align:center;">Criar nova turma</h3>
-                <p style="text-align:center; font-size:0.8rem; color:#666; margin-bottom:20px;">Defina um nome. O código de acesso será gerado automaticamente.</p>
-                <form id="form-criar-turma">
-                    <div class="form-group"><label>Nome da turma</label><input type="text" id="turma-nome" placeholder="Ex: História da Arte" required></div>
-                    <button type="submit" class="btn-enviar" style="margin-top:10px;">Criar turma</button>
-                    <button type="button" id="btn-cancelar-turma" class="btn-cancelar">Cancelar</button>
-                </form>
-            </div>
-        </div>
-    </template>
 
-    <!-- MODAL AGENDAR / NOVA ATIVIDADE -->
-    <template id="tpl-modal-agendar">
-        <div class="modal-overlay">
-            <div class="login-card fade-in" style="max-width: 550px;">
-                <h3 style="text-align: center; margin-bottom: 20px; color: var(--dark-green);">Nova Atividade / Cronograma</h3>
-                <form id="form-ag">
-                    <div class="form-group"><label>Título:</label><input type="text" id="ag-t" required placeholder="Ex: Pesquisa de referências"></div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                        <div class="form-group"><label>Data Início:</label><input type="date" id="ag-d-ini" required></div>
-                        <div class="form-group"><label>Data Fim:</label><input type="date" id="ag-d-fim" required></div>
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
-                        <div class="form-group"><label>Hora Início:</label><input type="time" id="ag-h1" required></div>
-                        <div class="form-group"><label>Hora Fim:</label><input type="time" id="ag-h2" required></div>
-                    </div>
-                    <div class="form-group"><label>📖 Conteúdo a estudar:</label><textarea id="ag-conteudo" rows="2" placeholder="Descrição..."></textarea></div>
-                    <div class="form-group"><label>🔗 Link de apoio:</label><input type="url" id="ag-link" placeholder="https://..."></div>
-                    <div class="form-group"><label>📝 Atividades a desenvolver:</label><textarea id="ag-ativ-desc" rows="2" placeholder="Descrição da entrega..."></textarea></div>
-                    <div class="form-group">
-                        <label>👤 Destinatário:</label>
-                        <select id="ag-sel-aluno">
-                            <option value="geral">Geral (Toda a Turma)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn-enviar">Salvar Atividade</button>
-                    <button type="button" id="btn-f-agenda" class="btn-cancelar">Cancelar</button>
-                </form>
-            </div>
-        </div>
-    </template>
 
     <!-- MODAL DETALHES E ENTREGA (ALUNO) -->
     <template id="tpl-modal-detalhes-agendamento">

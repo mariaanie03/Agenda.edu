@@ -248,10 +248,13 @@ async function renderizarProfessor() {
                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                     <h3 style="margin-bottom: 5px;">${t.nome}</h3>
                     <div style="display:flex; gap: 5px;">
-                        <button onclick="editarTurma(${t.id}, '${t.nome}')" title="Editar nome" style="border:none; background:none; cursor:pointer; font-size: 1rem;">✏️</button>
+                        <button onclick="prepararEdicao(${t.id})" title="Editar" "style="border:none; background:none; cursor:pointer; font-size: 1rem;">✏️</button>
                         <button onclick="excluirTurma(${t.id})" title="Excluir turma" style="border:none; background:none; cursor:pointer; font-size: 1rem;">🗑️</button>
                     </div>
                 </div>
+                 <p style="font-size: 0.85rem; color: #2c3e50; font-weight: bold; margin-bottom: 5px;">
+                ${t.disciplina ? '📖 ' + t.disciplina : ''}
+            </p>
                 <span class="info-tag" style="font-size:0.8rem; color:#666;">Código: ${t.codigo_convite}</span>
                 <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
                     <button onclick="gerenciarTurma(${t.id}, '${t.nome}')" class="btn-enviar" style="padding: 10px; font-size: 0.9rem; background: var(--dark-green);">Corrigir cronogramas</button>
@@ -300,19 +303,32 @@ function abrirModalAcao(titulo, texto, tipo, onConfirm, valorAtual = "") {
 }
 
 // Chamada da Edição
-function editarTurma(turmaId, nomeAtual) {
-    abrirModalAcao(
-        "Editar Turma", 
-        "Altere o nome da sua turma abaixo:", 
-        "editar", 
-        async (novoNome) => {
-            if (novoNome && novoNome !== nomeAtual) {
-                await _supabase.from('turmas').update({ nome: novoNome }).eq('id', turmaId);
-                renderizarProfessor();
-            }
-        }, 
-        nomeAtual
-    );
+function editarTurma(turmaId, dadosTurma) {
+    const clone = document.getElementById('tpl-modal-acao-turma').content.cloneNode(true);
+    document.body.appendChild(clone);
+    const modal = document.querySelector('.modal-overlay');
+    
+    modal.querySelector('#mod-campos-edicao').style.display = 'block';
+    // Preenche com os dados reais
+    modal.querySelector('#edit-nome').value = dadosTurma.nome || "";
+    modal.querySelector('#edit-disciplina').value = dadosTurma.disciplina || "";
+    modal.querySelector('#edit-ano').value = dadosTurma.ano_letivo || "";
+    modal.querySelector('#edit-detalhes').value = dadosTurma.detalhes || "";
+
+    modal.querySelector('#btn-confirmar-acao').onclick = async () => {
+        const novosDados = { 
+            nome: modal.querySelector('#edit-nome').value,
+            disciplina: modal.querySelector('#edit-disciplina').value,
+            ano_letivo: modal.querySelector('#edit-ano').value,
+            detalhes: modal.querySelector('#edit-detalhes').value
+        };
+        
+        await _supabase.from('turmas').update(novosDados).eq('id', turmaId);
+        modal.remove();
+        renderizarProfessor(); // Recarrega a lista
+    };
+    
+    modal.querySelector('#btn-cancelar-acao').onclick = () => modal.remove();
 }
 
 // Chamada da Exclusão
@@ -329,7 +345,25 @@ function excluirTurma(turmaId) {
 }
 
 
+async function prepararEdicao(turmaId) {
+    // Busca a turma diretamente no Supabase com base no ID
+    const { data: turma, error } = await _supabase
+        .from('turmas')
+        .select('*')
+        .eq('id', turmaId)
+        .maybeSingle();
 
+    if (turma) {
+        editarTurma(turmaId, turma);
+    } else {
+        alert("Erro ao buscar dados da turma.");
+    }
+}
+
+
+
+
+// ----------------------------------------- 
 
 function abrirModalCriarTurma() {
     document.body.appendChild(document.getElementById('tpl-modal-criar-turma').content.cloneNode(true));
@@ -337,7 +371,14 @@ function abrirModalCriarTurma() {
     document.getElementById('btn-cancelar-turma').onclick = () => modal.remove();
     document.getElementById('form-criar-turma').onsubmit = async (e) => {
         e.preventDefault();
-        const p = { nome: document.getElementById('turma-nome').value, codigo_convite: Math.random().toString(36).substring(7).toUpperCase(), professor_id: getID(usuarioLogado) };
+        const p = { 
+            nome: document.getElementById('turma-nome').value,
+            disciplina: document.getElementById('turma-disciplina').value,
+            ano_letivo: document.getElementById('turma-ano').value,
+            detalhes: document.getElementById('turma-detalhes').value,
+            codigo_convite: Math.random().toString(36).substring(7).toUpperCase(), 
+            professor_id: getID(usuarioLogado) 
+        };
         await _supabase.from('turmas').insert([p]);
         modal.remove(); renderizarProfessor();
     };
@@ -597,7 +638,7 @@ async function abrirModalAgendar(turmaId, item = null) {
 function editarAgendamento(item) { abrirModalAgendar(item.turma_id, item); }
 
 // =========================================================
-// 5. MÓDULO ALUNO
+// 5. MÓDULO ALUNO (ATUALIZADO)
 // =========================================================
 async function renderizarAluno() {
     carregarTela('tpl-dash-aluno');
@@ -605,17 +646,31 @@ async function renderizarAluno() {
     document.getElementById('btn-l-aluno').onclick = () => { localStorage.removeItem('usuarioSessao'); location.reload(); };
     document.getElementById('btn-e-turma').onclick = abrirModalEntrarTurma;
 
-    const { data: v } = await _supabase.from('turma_alunos').select('turma_id, turmas(nome, usuarios(nome))').eq('aluno_id', getID(usuarioLogado));
+    // Buscando as turmas e incluindo a coluna 'disciplina' no select
+    const { data: v } = await _supabase
+        .from('turma_alunos')
+        .select('turma_id, turmas(nome, disciplina, usuarios(nome))')
+        .eq('aluno_id', getID(usuarioLogado));
     
     const containerTurmasAluno = document.getElementById('lista-turmas-aluno');
+    
     if (!v || v.length === 0) {
         containerTurmasAluno.innerHTML = "<p style='grid-column:1/-1; color:#666;'>Você ainda não está matriculado em nenhuma turma.</p>";
     } else {
         containerTurmasAluno.innerHTML = v.map(x => `
             <div class="card-item" style="border-top-color:#2980b9;">
-                <h3>${x.turmas.nome}</h3>
-                <span class="info-tag" style="margin:5px 0 15px 0; display:block;">Prof. ${x.turmas.usuarios?.nome || 'Docente'}</span>
-                <button onclick="verMateriaisAluno(${x.turma_id}, '${x.turmas.nome}', '${x.turmas.usuarios?.nome || ''}')" class="btn-enviar" style="background:#2980b9; padding:10px; font-size:0.9rem;">Acessar turma</button>
+                <h3 style="margin-bottom: 5px;">${x.turmas.nome}</h3>
+                
+                <!-- Exibição da Disciplina -->
+                <p style="font-size: 0.85rem; color: var(--dark-green); font-weight: bold; margin-bottom: 8px;">
+                    ${x.turmas.disciplina ? '📖 ' + x.turmas.disciplina : 'Disciplina não definida'}
+                </p>
+                
+                <span class="info-tag" style="margin-bottom: 15px; display:block; font-size: 0.8rem; color: #666;">
+                    Prof. ${x.turmas.usuarios?.nome || 'Docente'}
+                </span>
+                
+                <button onclick="verMateriaisAluno(${x.turma_id}, '${x.turmas.nome}', '${x.turmas.usuarios?.nome || ''}')" class="btn-enviar" style="background:#2980b9; padding:10px; font-size:0.9rem; width:100%;">Acessar turma</button>
             </div>`).join('');
     }
 }
