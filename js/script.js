@@ -221,11 +221,9 @@ function mostrarValidacaoPin(email, pinCorreto, nome, tipo, senha) {
     };
 }
 
+
 // =========================================================
 // 4. MÓDULO PROFESSOR 
-// =========================================================
-// =========================================================
-// 4. MÓDULO PROFESSOR (ATUALIZADO)
 // =========================================================
 async function renderizarProfessor() {
     carregarTela('tpl-dash-professor');
@@ -235,32 +233,135 @@ async function renderizarProfessor() {
 
     const container = document.getElementById('lista-turmas');
     const inputBusca = document.getElementById('busca-turma');
+    const containerAlertasProf = document.getElementById('container-alertas-professor');
 
     const { data: turmas } = await _supabase.from('turmas').select('*').eq('professor_id', getID(usuarioLogado));
 
+    if (!turmas || turmas.length === 0) {
+        container.innerHTML = "<p style='grid-column: 1/-1; text-align:center; color:#666;'>Nenhuma turma encontrada.</p>";
+        return;
+    }
+
+    // --- VERIFICAÇÃO DE TRABALHOS ENTREGUES AGUARDANDO CORREÇÃO ---
+    const turmaIds = turmas.map(t => t.id);
+    let pendentesGerais = [];
+
+    // Busca cronogramas de todas as turmas do professor
+    const { data: cronogramas } = await _supabase
+        .from('cronograma')
+        .select('id, titulo, turma_id')
+        .in('turma_id', turmaIds);
+
+    if (cronogramas && cronogramas.length > 0) {
+        const cronoIds = cronogramas.map(c => c.id);
+
+        // Busca entregas que foram feitas (possuem resposta_url) mas ainda não têm nota
+        const { data: entregas } = await _supabase
+            .from('progresso_aluno')
+            .select('id, cronograma_id, aluno_id, resposta_url, nota')
+            .in('cronograma_id', cronoIds)
+            .is('nota', null);
+
+        const entregasSemNota = entregas?.filter(e => e.resposta_url && e.resposta_url.trim() !== "") || [];
+
+        if (entregasSemNota.length > 0) {
+            // Busca os nomes dos alunos que entregaram
+            const alunoIds = [...new Set(entregasSemNota.map(e => e.aluno_id))];
+            const { data: alunos } = await _supabase
+                .from('usuarios')
+                .select('id, nome')
+                .in('id', alunoIds);
+
+            pendentesGerais = entregasSemNota.map(ent => {
+                const c = cronogramas.find(item => item.id === ent.cronograma_id);
+                const t = turmas.find(item => item.id === c?.turma_id);
+                const a = alunos?.find(item => item.id === ent.aluno_id);
+
+                return {
+                    ...ent,
+                    tituloCrono: c?.titulo || 'Atividade',
+                    turmaId: t?.id,
+                    nomeTurma: t?.nome || 'Turma',
+                    nomeAluno: a?.nome || 'Estudante'
+                };
+            });
+        }
+    }
+
+    // Renderiza o card de aviso no topo se houver correções pendentes
+    if (containerAlertasProf) {
+        if (pendentesGerais.length > 0) {
+            containerAlertasProf.innerHTML = `
+                <div class="box-alerta-correcao fade-in">
+                    <div class="alerta-correcao-header">
+                        <span class="alerta-icone">📝</span>
+                        <div>
+                            <strong style="color: #92400e; font-size: 1rem;">Trabalhos entregues aguardando correção!</strong>
+                            <p style="font-size: 0.85rem; color: #78350f; margin-top: 2px;">
+                                Há ${pendentesGerais.length === 1 ? '1 trabalho entregue' : `${pendentesGerais.length} trabalhos entregues`} por alunos ainda não corrigidos:
+                            </p>
+                        </div>
+                    </div>
+                    <div class="alerta-correcao-lista">
+                        ${pendentesGerais.map(item => `
+                            <div class="alerta-correcao-item">
+                                <div>
+                                    <span class="alerta-tag-turma">📖 ${item.nomeTurma}</span>
+                                    <strong style="color: #1f2937; font-size: 0.95rem; display: block; margin: 4px 0;">
+                                        ${item.tituloCrono}
+                                    </strong>
+                                    <span style="font-size: 0.8rem; color: #555;">
+                                        👤 Aluno: <b>${item.nomeAluno}</b>
+                                    </span>
+                                </div>
+                                <button onclick="irParaCorrecaoDireta(${item.turmaId}, '${item.nomeTurma.replace(/'/g, "\\'")}', ${item.cronograma_id}, '${item.tituloCrono.replace(/'/g, "\\'")}')" class="btn-acao" style="background: #d97706; font-size: 0.8rem; padding: 8px 14px; white-space: nowrap;">
+                                    Corrigir agora
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            containerAlertasProf.innerHTML = "";
+        }
+    }
+
+    // Função interna para desenhar as turmas e adicionar o badge de pendências
     const desenharTurmas = (listaFiltrada) => {
         if (!listaFiltrada || listaFiltrada.length === 0) {
             container.innerHTML = "<p style='grid-column: 1/-1; text-align:center; color:#666;'>Nenhuma turma encontrada.</p>";
             return;
         }
-        container.innerHTML = listaFiltrada.map(t => `
-            <div class="card-item">
-                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                    <h3 style="margin-bottom: 5px;">${t.nome}</h3>
-                    <div style="display:flex; gap: 5px;">
-                        <button onclick="prepararEdicao(${t.id})" title="Editar" "style="border:none; background:none; cursor:pointer; font-size: 1rem;">✏️</button>
-                        <button onclick="excluirTurma(${t.id})" title="Excluir turma" style="border:none; background:none; cursor:pointer; font-size: 1rem;">🗑️</button>
+
+        container.innerHTML = listaFiltrada.map(t => {
+            const qtdPendentesTurma = pendentesGerais.filter(p => p.turmaId === t.id).length;
+            const badgePendencia = qtdPendentesTurma > 0 
+                ? `<span class="badge-pendente-prof">⚠️ ${qtdPendentesTurma} ${qtdPendentesTurma === 1 ? 'correção pendente' : 'correções pendentes'}</span>` 
+                : '';
+
+            return `
+                <div class="card-item">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <h3 style="margin-bottom: 3px;">${t.nome}</h3>
+                            ${badgePendencia}
+                        </div>
+                        <div style="display:flex; gap: 5px;">
+                            <button onclick="prepararEdicao(${t.id})" title="Editar" style="border:none; background:none; cursor:pointer; font-size: 1rem;">✏️</button>
+                            <button onclick="excluirTurma(${t.id})" title="Excluir turma" style="border:none; background:none; cursor:pointer; font-size: 1rem;">🗑️</button>
+                        </div>
                     </div>
-                </div>
-                 <p style="font-size: 0.85rem; color: #2c3e50; font-weight: bold; margin-bottom: 5px;">
-                ${t.disciplina ? '📖 ' + t.disciplina : ''}
-            </p>
-                <span class="info-tag" style="font-size:0.8rem; color:#666;">Código: ${t.codigo_convite}</span>
-                <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-                    <button onclick="gerenciarTurma(${t.id}, '${t.nome}')" class="btn-enviar" style="padding: 10px; font-size: 0.9rem; background: var(--dark-green);">Corrigir cronogramas</button>
-                    <button onclick="abrirModalAgendar(${t.id})" class="btn-cancelar" style="margin-top: 0; padding: 10px; font-size: 0.9rem; background: #e2ebd8; color: var(--dark-green); font-weight: bold;">Propor cronogramas</button>
-                </div>
-            </div>`).join('');
+                    <p style="font-size: 0.85rem; color: #2c3e50; font-weight: bold; margin-bottom: 5px;">
+                        ${t.disciplina ? '📖 ' + t.disciplina : ''}
+                    </p>
+                    <span class="info-tag" style="font-size:0.8rem; color:#666;">Código: ${t.codigo_convite}</span>
+                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
+                        <button onclick="gerenciarTurma(${t.id}, '${t.nome}')" class="btn-enviar" style="padding: 10px; font-size: 0.9rem; background: var(--dark-green);">Corrigir cronogramas</button>
+                        <button onclick="abrirModalAgendar(${t.id})" class="btn-cancelar" style="margin-top: 0; padding: 10px; font-size: 0.9rem; background: #e2ebd8; color: var(--dark-green); font-weight: bold;">Propor cronogramas</button>
+                    </div>
+                </div>`;
+        }).join('');
     };
 
     desenharTurmas(turmas);
@@ -271,6 +372,8 @@ async function renderizarProfessor() {
         desenharTurmas(filtradas);
     };
 }
+
+
 
 // =========================================================
 // FUNÇÕES DE SUPORTE PARA A TELA DO PROFESSOR
@@ -358,6 +461,14 @@ async function prepararEdicao(turmaId) {
     } else {
         alert("Erro ao buscar dados da turma.");
     }
+}
+
+// Função auxiliar para levar o professor diretamente à turma com o cronograma já selecionado
+async function irParaCorrecaoDireta(turmaId, nomeTurma, cronogramaId, cronogramaTitulo) {
+    await gerenciarTurma(turmaId, nomeTurma);
+    setTimeout(() => {
+        selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, turmaId);
+    }, 150);
 }
 
 
@@ -682,11 +793,9 @@ async function abrirModalAgendar(turmaId, item = null) {
 
 function editarAgendamento(item) { abrirModalAgendar(item.turma_id, item); }
 
+
 // =========================================================
-// 5. MÓDULO ALUNO (ATUALIZADO)
-// =========================================================
-// =========================================================
-// 5. MÓDULO ALUNO (ATUALIZADO COM BOTÃO DE SAIR DA TURMA)
+// 5. MÓDULO ALUNO 
 // =========================================================
 async function renderizarAluno() {
     carregarTela('tpl-dash-aluno');
@@ -694,39 +803,111 @@ async function renderizarAluno() {
     document.getElementById('btn-l-aluno').onclick = () => { localStorage.removeItem('usuarioSessao'); location.reload(); };
     document.getElementById('btn-e-turma').onclick = abrirModalEntrarTurma;
 
-    // Buscando as turmas e incluindo a coluna 'disciplina' no select
     const { data: v } = await _supabase
         .from('turma_alunos')
         .select('id, turma_id, turmas(nome, disciplina, usuarios(nome))')
         .eq('aluno_id', getID(usuarioLogado));
     
     const containerTurmasAluno = document.getElementById('lista-turmas-aluno');
+    const containerAlertas = document.getElementById('container-alertas-aluno');
     
     if (!v || v.length === 0) {
         containerTurmasAluno.innerHTML = "<p style='grid-column:1/-1; color:#666;'>Você ainda não está matriculado em nenhuma turma.</p>";
-    } else {
-        containerTurmasAluno.innerHTML = v.map(x => `
-            <div class="card-item card-turma-aluno" style="border-top-color:#2980b9; position: relative;">
-                
-                <!-- Botão de Sair da Turma (Estilizado no canto superior direito) -->
-                <button onclick="sairDaTurma(${x.id}, '${x.turmas.nome}')" class="btn-sair-turma" title="Sair da turma">
-                    🚪 Sair da turma
-                </button>
-
-                <h3 style="margin-bottom: 5px; padding-right: 70px;">${x.turmas.nome}</h3>
-                
-                <!-- Exibição da Disciplina -->
-                <p style="font-size: 0.85rem; color: var(--dark-green); font-weight: bold; margin-bottom: 8px;">
-                    ${x.turmas.disciplina ? '📖 ' + x.turmas.disciplina : 'Disciplina não definida'}
-                </p>
-                
-                <span class="info-tag" style="margin-bottom: 15px; display:block; font-size: 0.8rem; color: #666;">
-                    Prof. ${x.turmas.usuarios?.nome || 'Docente'}
-                </span>
-                
-                <button onclick="verMateriaisAluno(${x.turma_id}, '${x.turmas.nome}', '${x.turmas.usuarios?.nome || ''}')" class="btn-enviar" style="background:#2980b9; padding:10px; font-size:0.9rem; width:100%;">Acessar turma</button>
-            </div>`).join('');
+        return;
     }
+
+    // --- VERIFICAÇÃO DE PRAZOS (1 DIA ANTES DE EXPIRAR) ---
+    const turmaIds = v.map(item => item.turma_id);
+    
+    // Busca todas as atividades das turmas do aluno
+    const { data: todasAtividades } = await _supabase
+        .from('cronograma')
+        .select('*')
+        .in('turma_id', turmaIds)
+        .or(`aluno_id.is.null,aluno_id.eq.${getID(usuarioLogado)}`);
+
+    // Busca as entregas já feitas pelo aluno
+    const { data: entregasFeitas } = await _supabase
+        .from('progresso_aluno')
+        .select('cronograma_id, resposta_url')
+        .eq('aluno_id', getID(usuarioLogado));
+
+    const atividadesUrgentes = [];
+
+    if (todasAtividades) {
+        todasAtividades.forEach(ativ => {
+            // Verifica se o aluno já enviou
+            const entrega = entregasFeitas?.find(e => e.cronograma_id === ativ.id);
+            const jaEntregou = entrega && entrega.resposta_url && entrega.resposta_url.trim() !== "";
+
+            // Só gera alerta se o aluno AINDA NÃO entregou
+            if (!jaEntregou) {
+                const prazo = verificarPrazoProximo(ativ.data_fim || ativ.data, ativ.hora_fim);
+                if (prazo && prazo.urgente) {
+                    const turmaInfo = v.find(t => t.turma_id === ativ.turma_id);
+                    atividadesUrgentes.push({
+                        ...ativ,
+                        nomeTurma: turmaInfo?.turmas?.nome || 'Turma',
+                        nomeProf: turmaInfo?.turmas?.usuarios?.nome || '',
+                        prazo
+                    });
+                }
+            }
+        });
+    }
+
+    // Exibe o painel de alerta se houver atividade vencendo nas próximas 24h
+    if (containerAlertas) {
+        if (atividadesUrgentes.length > 0) {
+            containerAlertas.innerHTML = `
+                <div class="box-alerta-prazo fade-in">
+                    <div class="alerta-prazo-header">
+                        <span class="alerta-icone">⚠️</span>
+                        <div>
+                            <strong style="color: #991b1b; font-size: 1rem;">Atenção: Atividade expirando em breve!</strong>
+                            <p style="font-size: 0.85rem; color: #7f1d1d; margin-top: 2px;">
+                                Você possui ${atividadesUrgentes.length === 1 ? '1 atividade com entrega nas próximas 24 horas' : `${atividadesUrgentes.length} atividades que vencem em menos de 24 horas`}:
+                            </p>
+                        </div>
+                    </div>
+                    <div class="alerta-prazo-lista">
+                        ${atividadesUrgentes.map(at => `
+                            <div class="alerta-prazo-item">
+                                <div>
+                                    <span class="alerta-tag-turma">📖 ${at.nomeTurma}</span>
+                                    <strong style="color: #1f2937; font-size: 0.95rem; display: block; margin: 4px 0;">${at.titulo}</strong>
+                                    <span style="font-size: 0.8rem; color: #dc2626; font-weight: 600;">
+                                        ⏳ Encerra em cerca de ${at.prazo.horasRestantes}h (${at.prazo.dataLimiteFormatada})
+                                    </span>
+                                </div>
+                                <button onclick="verMateriaisAluno(${at.turma_id}, '${at.nomeTurma}', '${at.nomeProf}')" class="btn-acao" style="background: #dc2626; font-size: 0.8rem; padding: 8px 14px; white-space: nowrap;">
+                                    Abrir atividade
+                                </button>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        } else {
+            containerAlertas.innerHTML = "";
+        }
+    }
+
+    // Renderiza os cards das turmas normalmente
+    containerTurmasAluno.innerHTML = v.map(x => `
+        <div class="card-item card-turma-aluno" style="border-top-color:#2980b9; position: relative;">
+            <button onclick="sairDaTurma(${x.id}, '${x.turmas.nome}')" class="btn-sair-turma" title="Sair da turma">
+                🚪 Sair da turma
+            </button>
+            <h3 style="margin-bottom: 5px; padding-right: 70px;">${x.turmas.nome}</h3>
+            <p style="font-size: 0.85rem; color: var(--dark-green); font-weight: bold; margin-bottom: 8px;">
+                ${x.turmas.disciplina ? '📖 ' + x.turmas.disciplina : 'Disciplina não definida'}
+            </p>
+            <span class="info-tag" style="margin-bottom: 15px; display:block; font-size: 0.8rem; color: #666;">
+                Prof. ${x.turmas.usuarios?.nome || 'Docente'}
+            </span>
+            <button onclick="verMateriaisAluno(${x.turma_id}, '${x.turmas.nome}', '${x.turmas.usuarios?.nome || ''}')" class="btn-enviar" style="background:#2980b9; padding:10px; font-size:0.9rem; width:100%;">Acessar turma</button>
+        </div>`).join('');
 }
 
 // Nova função para processar a saída do aluno da turma
@@ -806,15 +987,27 @@ async function verMateriaisAluno(id, nomeTurma, nomeProf) {
     document.getElementById('txt-m-prof').innerText = `Prof. ${nomeProf}`;
     document.getElementById('btn-v-est').onclick = renderizarAluno;
     
-    const carregarCronogramaAluno = async (filtro = 'todos') => {
-        const { data: ag } = await _supabase.from('cronograma').select('*').eq('turma_id', id).or(`aluno_id.is.null,aluno_id.eq.${getID(usuarioLogado)}`).order('data', {ascending: true});
-        const { data: progresso } = await _supabase.from('progresso_aluno').select('*').eq('aluno_id', getID(usuarioLogado));
+const carregarCronogramaAluno = async (filtro = 'todos') => {
+        // Busca as atividades da turma (gerais ou direcionadas para este aluno)
+        const { data: ag } = await _supabase
+            .from('cronograma')
+            .select('*')
+            .eq('turma_id', id)
+            .or(`aluno_id.is.null,aluno_id.eq.${getID(usuarioLogado)}`)
+            .order('data', { ascending: true });
+
+        // Busca o histórico de entregas do aluno
+        const { data: progresso } = await _supabase
+            .from('progresso_aluno')
+            .select('*')
+            .eq('aluno_id', getID(usuarioLogado));
 
         const containerCronograma = document.getElementById('l-ag-prof');
         
         let listaFiltrada = ag || [];
+
+        // Filtro por status
         if (filtro === 'pendente') {
-            // Considera pendente se não tem registro OU se tem registro mas a resposta_url está vazia/nula
             listaFiltrada = ag.filter(a => {
                 const p = progresso?.find(x => x.cronograma_id === a.id);
                 return !p || !p.resposta_url || p.resposta_url.trim() === "";
@@ -826,6 +1019,7 @@ async function verMateriaisAluno(id, nomeTurma, nomeProf) {
             });
         }
 
+        // Renderiza a lista de atividades com badge de nota e aviso de prazo
         containerCronograma.innerHTML = listaFiltrada.map(a => {
             const p = progresso?.find(x => x.cronograma_id === a.id);
             let badgeNota = `<span style="background:#eee; color:#666; padding:3px 8px; border-radius:6px; font-size:0.75rem;">Pendente</span>`;
@@ -836,11 +1030,22 @@ async function verMateriaisAluno(id, nomeTurma, nomeProf) {
                 badgeNota = `<span style="background:#f39c12; color:white; padding:3px 8px; border-radius:6px; font-size:0.75rem;">Aguardando correção</span>`;
             }
 
+            // Tag se estiver a 1 dia de expirar e ainda pendente
+            const prazo = verificarPrazoProximo(a.data_fim || a.data, a.hora_fim);
+            const naoEntregou = !p || !p.resposta_url || p.resposta_url.trim() === "";
+            let tagUrgente = "";
+            if (naoEntregou && prazo && prazo.urgente) {
+                tagUrgente = `<span class="badge-prazo-urgente">⚠️ Vence em ${prazo.horasRestantes}h!</span>`;
+            }
+
             return `
                 <div class="item-cronograma" style="display:flex; justify-content:space-between; align-items:center; padding:15px; background:white; border-radius:10px; border:1px solid #eee;">
                     <div>
-                        <span style="font-size:0.75rem; color:#666; font-weight:bold; text-transform:uppercase;">Entrega · ${a.data || 'Sem data'}</span><br>
-                        <strong style="font-size:1rem; color:#222;">${a.titulo}</strong>
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span style="font-size:0.75rem; color:#666; font-weight:bold; text-transform:uppercase;">Entrega · ${a.data_fim || a.data || 'Sem data'}</span>
+                            ${tagUrgente}
+                        </div>
+                        <strong style="font-size:1rem; color:#222; margin-top:2px; display:block;">${a.titulo}</strong>
                         <p style="font-size:0.8rem; color:#666; margin-top:2px;">Atividade avaliada e disponível para consulta.</p>
                     </div>
                     <div style="display:flex; align-items:center; gap:15px;">
@@ -850,9 +1055,12 @@ async function verMateriaisAluno(id, nomeTurma, nomeProf) {
                 </div>`;
         }).join('') || "<p style='text-align:center; color:#666; padding:20px;'>Nenhuma atividade encontrada.</p>";
 
+        // Adiciona os eventos de clique no botão 'Ver detalhes' de cada atividade
         listaFiltrada.forEach(a => {
             const btn = document.getElementById(`btn-det-${a.id}`);
-            if (btn) btn.onclick = () => abrirDetalhesAluno(a, () => carregarCronogramaAluno(document.getElementById('filtro-status-aluno').value));
+            if (btn) {
+                btn.onclick = () => abrirDetalhesAluno(a, () => carregarCronogramaAluno(document.getElementById('filtro-status-aluno').value));
+            }
         });
     };
 
@@ -988,6 +1196,33 @@ async function excluirItem(id, tabela, turmaId) {
 }
 
 
+function verificarPrazoProximo(dataFimStr, horaFimStr) {
+    if (!dataFimStr) return null;
+    const hora = horaFimStr ? (horaFimStr.length === 5 ? `${horaFimStr}:00` : horaFimStr) : '23:59:59';
+    const dataLimite = new Date(`${dataFimStr}T${hora}`);
+    const agora = new Date();
+
+    const diffMs = dataLimite.getTime() - agora.getTime();
+    const umDiaMs = 24 * 60 * 60 * 1000; // 24 horas em milissegundos
+
+    // Já expirou
+    if (diffMs <= 0) return { expirado: true, urgente: false };
+
+    // Vence em até 24 horas (1 dia antes)
+    if (diffMs <= umDiaMs) {
+        const horasRestantes = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60)));
+        return {
+            expirado: false,
+            urgente: true,
+            horasRestantes,
+            dataLimiteFormatada: `${dataLimite.toLocaleDateString('pt-BR')} às ${dataLimite.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`
+        };
+    }
+
+    return { expirado: false, urgente: false };
+}
+
+
 // =========================================================
 // 7. SISTEMA DE PALETA DE CORES FIXAS
 // =========================================================
@@ -1095,6 +1330,40 @@ document.addEventListener('DOMContentLoaded', () => {
             aplicarTemaFixo(tema, true);
         }
     });
+});
+
+// Função para abrir o modal de escolha de temas
+function abrirModalTemas() {
+    const tpl = document.getElementById('tpl-modal-tema');
+    if (!tpl) return;
+    
+    document.body.appendChild(tpl.content.cloneNode(true));
+    const modal = document.querySelector('.modal-overlay:has(#btn-fechar-modal-tema)');
+    
+    // Fechar pelo botão 'Fechar'
+    modal.querySelector('#btn-fechar-modal-tema').onclick = () => modal.remove();
+
+    // Fechar clicando fora do card
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
+    };
+
+    // Ação ao selecionar uma das cores
+    modal.querySelectorAll('.btn-cor-tema-modal').forEach(btn => {
+        btn.onclick = () => {
+            const tema = btn.getAttribute('data-tema');
+            aplicarTemaFixo(tema, true);
+            modal.remove(); // Fecha o modal após selecionar
+        };
+    });
+}
+
+// Ouvinte para abrir o modal quando clicar no botão colorido
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.closest('#btn-abrir-modal-tema')) {
+        e.preventDefault();
+        abrirModalTemas();
+    }
 });
 
 

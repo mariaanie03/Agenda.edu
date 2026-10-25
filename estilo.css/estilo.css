@@ -444,7 +444,7 @@ footer {
 
 /* Ajustes para Celulares e Telas Pequenas (abaixo de 768px) */
 @media (max-width: 768px) {
-    /* Transforma o menu lateral fixo em uma barra de navegação superior compacta */
+    
     .container {
         flex-direction: column;
     }
@@ -455,7 +455,7 @@ footer {
         border-bottom: 1px solid #d5e0cc;
     }
     aside h2 {
-        display: none; /* Oculta o título "MENU" para economizar espaço vertical */
+        display: none; /* vai ocultar o "Menu" para econozar espaço */
     }
     aside nav ul {
         display: flex;
@@ -468,10 +468,10 @@ footer {
         border-radius: 8px;
     }
     aside nav ul li a:hover {
-        padding-left: 12px; /* Remove o deslocamento lateral exagerado em telas mobile */
+        padding-left: 12px; /* Remove o deslocamento lateral exagerado em telas menores */
     }
 
-    /* Ajustes gerais de tipografia e espaçamento em celulares */
+    /* Ajustes gerais*/
     header h1 {
         font-size: 1.8rem;
         margin-left: 10px;
@@ -509,7 +509,7 @@ footer {
     }
 }
 
-/* Ajustes finos para celulares muito estreitos (abaixo de 480px) */
+/* Ajustes finos para celulares muito estreitos  */
 @media (max-width: 480px) {
     header h1 {
         font-size: 1.5rem;
@@ -527,7 +527,7 @@ footer {
 
 /* =========================================================
    SELETOR DE PALETA DE CORES FIXAS
-   ========================================================= */
+   ========================================================= 
 
 .seletor-tema-box {
     margin-top: auto; 
@@ -571,7 +571,7 @@ footer {
 .btn-cor-tema:hover {
     transform: scale(1.05);
     opacity: 0.9;
-}
+}*/
 
 /* Garante que o aside tenha posição relativa para o seletor fixar embaixo */
 aside {
@@ -594,5 +594,248 @@ aside {
     }
     aside {
         min-height: auto;
+    }
+}
+
+/* =========================================================
+   AVISO DE PRAZO EXPIRANDO (PORTAL DO ALUNO)
+   ========================================================= */
+.box-alerta-prazo {
+    background-color: #fef2f2;
+    border-left: 6px solid #dc2626;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(220, 38, 38, 0.08);
+}
+
+.alerta-prazo-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.alerta-icone {
+    font-size: 1.6rem;
+}
+
+.alerta-prazo-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.alerta-prazo-item {
+    background: #ffffff;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.alerta-tag-turma {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--dark-green);
+    background: #edf3eb;
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+/* Badge piscante na lista de atividades */
+.badge-prazo-urgente {
+    background: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    animation: pulsarUrgencia 1.8s infinite;
+}
+
+@keyframes pulsarUrgencia {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+@media (max-width: 600px) {
+    .alerta-prazo-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .alerta-prazo-item button {
+        width: 100%;
+        margin-top: 8px;
+    }
+}
+
+
+/* =========================================================
+   AVISO DE TRABALHOS PARA CORRIGIR (ÁREA DO PROFESSOR)
+   ========================================================= */
+.box-alerta-correcao {
+    background-color: #fffbeb;
+    border-left: 6px solid #d97706;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(217, 119, 6, 0.08);
+}
+
+.alerta-correcao-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.alerta-correcao-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 250px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.alerta-correcao-lista::-webkit-scrollbar { 
+    width: 5px; 
+}
+
+.alerta-correcao-lista::-webkit-scrollbar-thumb { 
+    background: #fcd34d; 
+    border-radius: 10px; 
+}
+
+.alerta-correcao-item {
+    background: #ffffff;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Badge exibido no card da turma que tem entregas */
+.badge-pendente-prof {
+    display: inline-block;
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+@media (max-width: 600px) {
+    .alerta-correcao-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .alerta-correcao-item button {
+        width: 100%;
+        margin-top: 8px;
+    }
+}
+
+/* =========================================================
+   BOTÃO COLORIDO "MUDAR TEMA"
+   ========================================================= */
+.btn-mudar-tema {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: linear-gradient(135deg, #e11d48, #ea580c, #ca8a04, #16a34a, #2563eb, #9333ea);
+    background-size: 300% 300%;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+    animation: pulsarGradiente 6s ease infinite;
+}
+
+@keyframes pulsarGradiente {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.btn-mudar-tema:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    filter: brightness(1.1);
+}
+
+/* Grade de cores dentro do modal */
+.grid-paleta-cores-modal {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.btn-cor-tema-modal {
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    padding: 12px 6px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+    text-align: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-cor-tema-modal:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Ajuste do botão para celular */
+@media (max-width: 768px) {
+    .btn-mudar-tema {
+        width: auto;
+        margin: 5px auto 0 auto;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+    }
+}
+
+
+.box-tema-inferior {
+    margin-top: auto; /* O segredo do Flexbox: empurra para o final */
+    padding: 10px;
+    width: 90%;
+}
+
+/* Garante que o aside ocupe a altura total para o botão descer */
+aside {
+    display: flex;
+    flex-direction: column;
+    min-height: calc(100vh - 81px);
+}
+
+/* Ajuste para celular */
+@media (max-width: 768px) {
+    .box-tema-inferior {
+        margin-top: 15px;
+        padding: 10px;
+        border-top: none;
     }
 }

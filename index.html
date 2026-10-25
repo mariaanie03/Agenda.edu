@@ -27,24 +27,10 @@
                 </ul>
             </nav>
             
-            <!-- SELETOR DE CORES FIXAS -->
-            <div class="seletor-tema-box">
-                <label>🎨 Tema do Portal</label>
-                <div class="grid-paleta-cores">
-                    <button class="btn-cor-tema" data-tema="padrao" style="background: #0d2e1a;" title="Padrão (Verde)">Padrão</button>
-                    <button class="btn-cor-tema" data-tema="rosa" style="background: #be185d;" title="Rosa">Rosa</button>
-                    <button class="btn-cor-tema" data-tema="vermelho" style="background: #dc2626;" title="Vermelho">Vermelho</button>
-                    <button class="btn-cor-tema" data-tema="roxo" style="background: #7e22ce;" title="Roxo">Roxo</button>
-                    <button class="btn-cor-tema" data-tema="laranja" style="background: #ea580c;" title="Laranja">Laranja</button>
-                    <button class="btn-cor-tema" data-tema="azul" style="background: #1d4ed8;" title="Azul">Azul</button>
-                    <button class="btn-cor-tema" data-tema="amarelo" style="background: #ca8a04; color: #000;" title="Amarelo">Amarelo</button>
-                    <button class="btn-cor-tema" data-tema="cinza" style="background: #475569;" title="Cinza">Cinza</button>
-                    <button class="btn-cor-tema" data-tema="preto" style="background: #020617;" title="Preto">Preto</button>
-                    <button class="btn-cor-tema" data-tema="marrom" style="background: #78350f;" title="Marrom">Marrom</button>
-                    <button class="btn-cor-tema" data-tema="bege" style="background: #a39171; color: #000;" title="Bege">Bege</button>
-                    <button class="btn-cor-tema" data-tema="bordo" style="background: #581c87;" title="Vermelho Bordo">Bordo</button>
-                </div>
-            </div>
+            <div class="box-tema-inferior">
+                <button type="button" id="btn-abrir-modal-tema" class="btn-mudar-tema">
+                    🎨 Mudar Tema
+                </button>
         </aside>
         <main id="conteudo-principal"></main>
     </div>
@@ -173,6 +159,9 @@
                     <button id="btn-logout" class="btn-logout">Sair</button>
                 </div>
             </div>
+
+              <div id="container-alertas-professor"></div>
+
             <p style="font-weight: bold; margin-bottom: 15px; color: #444;">Suas turmas</p>
             <div id="lista-turmas" class="grid-cards"></div>
         </div>
@@ -261,7 +250,7 @@
     </template>
 
 
-<!-- MODAL DE EDIÇÃO/EXCLUSÃO (GENÉRICO) -->
+<!-- MODAL DE EDIÇÃO/EXCLUSÃO  -->
 <template id="tpl-modal-acao-turma">
     <div class="modal-overlay">
         <div class="login-card fade-in" style="max-width: 450px;">
@@ -326,9 +315,15 @@
                     <button id="btn-l-aluno" class="btn-logout">Sair</button>
                 </div>
             </div>
+
+            
+                <div id="container-alertas-aluno"></div>
+
             <p style="font-weight: bold; margin-bottom: 15px; color: #444;">Minhas turmas</p>
             <div id="lista-turmas-aluno" class="grid-cards"></div>
         </div>
+
+        
     </template>
 
 
@@ -403,6 +398,34 @@
                     <button type="button" id="btn-enviar-estudo" class="btn-enviar" style="background: #27ae60;">Confirmar Entrega</button>
                 </div>
                 <button type="button" id="btn-fechar-detalhes" class="btn-cancelar" style="margin-top: 15px;">Fechar</button>
+            </div>
+        </div>
+    </template>
+
+    <!-- MODAL DE ESCOLHA DE TEMA -->
+    <template id="tpl-modal-tema">
+        <div class="modal-overlay">
+            <div class="login-card fade-in" style="max-width: 440px; text-align: center;">
+                <div class="avatar-topo" style="margin: 0 auto 12px auto;">🎨</div>
+                <h3 style="color: var(--dark-green); margin-bottom: 6px; font-size: 1.3rem;">Tema do Portal</h3>
+                <p style="font-size: 0.85rem; color: #666; margin-bottom: 18px;">Escolha uma cor para personalizar o seu portal:</p>
+                
+                <div class="grid-paleta-cores-modal">
+                    <button type="button" class="btn-cor-tema-modal" data-tema="padrao" style="background: #0d2e1a;" title="Padrão">Padrão</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="rosa" style="background: #be185d;" title="Rosa">Rosa</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="vermelho" style="background: #dc2626;" title="Vermelho">Vermelho</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="roxo" style="background: #7e22ce;" title="Roxo">Roxo</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="laranja" style="background: #ea580c;" title="Laranja">Laranja</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="azul" style="background: #1d4ed8;" title="Azul">Azul</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="amarelo" style="background: #ca8a04; color: #000;" title="Amarelo">Amarelo</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="cinza" style="background: #475569;" title="Cinza">Cinza</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="preto" style="background: #020617;" title="Preto">Preto</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="marrom" style="background: #78350f;" title="Marrom">Marrom</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="bege" style="background: #a39171; color: #000;" title="Bege">Bege</button>
+                    <button type="button" class="btn-cor-tema-modal" data-tema="bordo" style="background: #581c87;" title="Bordo">Bordo</button>
+                </div>
+
+                <button type="button" id="btn-fechar-modal-tema" class="btn-cancelar" style="margin-top: 18px;">Fechar</button>
             </div>
         </div>
     </template>
