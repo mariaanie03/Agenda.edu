@@ -1235,51 +1235,51 @@ const paletasDeCores = {
         bg: '#f9fbf6'
     },
     rosa: {
-        dark: '#4a1525',
-        logo: '#be185d',
-        sidebar: '#fce7f3',
-        bg: '#fff1f2'
+        dark: '#97002d',
+        logo: '#c92f6f',
+        sidebar: '#ffc3d0',
+        bg: '#fadde7'
     },
     vermelho: {
-        dark: '#450a0a',
-        logo: '#dc2626',
-        sidebar: '#fee2e2',
-        bg: '#fef2f2'
+        dark: '#8d0f0f',
+        logo: '#aa4040',
+        sidebar: '#ffb8b8',
+        bg: '#ffdfdf'
     },
     roxo: {
-        dark: '#3b0764',
+        dark: '#600677',
         logo: '#7e22ce',
-        sidebar: '#f3e8ff',
-        bg: '#faf5ff'
+        sidebar: '#d4beeb',
+        bg: '#f2e5ff'
     },
     laranja: {
-        dark: '#431407',
-        logo: '#ea580c',
+        dark: '#c75528',
+        logo: '#f05800',
         sidebar: '#ffedd5',
         bg: '#fff7ed'
     },
     azul: {
-        dark: '#0e2a47',
+        dark: '#0a2d53',
         logo: '#1d4ed8',
         sidebar: '#e0f2fe',
         bg: '#f0f9ff'
     },
     amarelo: {
-        dark: '#451a03',
+        dark: '#b37a00',
         logo: '#ca8a04',
         sidebar: '#fef9c3',
         bg: '#fefce8'
     },
     cinza: {
-        dark: '#1e293b',
-        logo: '#475569',
-        sidebar: '#f1f5f9',
-        bg: '#f8fafc'
+        dark: '#2d3035',
+        logo: '#707b8a',
+        sidebar: '#989899',
+        bg: '#dadada'
     },
     preto: {
         dark: '#000000',
         logo: '#27272a',
-        sidebar: '#e4e4e7',
+        sidebar: '#999999',
         bg: '#f4f4f5'
     },
     marrom: {
@@ -1289,16 +1289,16 @@ const paletasDeCores = {
         bg: '#fdfbf7'
     },
     bege: {
-        dark: '#5c4033',
-        logo: '#a39171',
-        sidebar: '#f3ece1',
-        bg: '#faf7f2'
+        dark: '#7a513d',
+        logo: '#c49a80',
+        sidebar: '#d4a57f',
+        bg: '#ffe2cf'
     },
     bordo: {
         dark: '#38040e',
-        logo: '#581c87',
-        sidebar: '#f5d0fe',
-        bg: '#fdf4ff'
+        logo: '#861d1d',
+        sidebar: '#9e4a4a',
+        bg: '#f3bebe'
     }
 };
 
