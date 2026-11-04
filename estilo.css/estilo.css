@@ -819,23 +819,33 @@ aside {
 
 
 .box-tema-inferior {
-    margin-top: auto; /* O segredo do Flexbox: empurra para o final */
+    margin-top: auto; /* O segredo do Flexbox: empurra para o final no PC */
     padding: 10px;
-    width: 90%;
+    width: 100%;
+    display: flex;
+    justify-content: center; /* Centraliza o botão */
 }
 
-/* Garante que o aside ocupe a altura total para o botão descer */
+/* Garante que o aside ocupe a altura total para o botão descer (Foco no PC) */
 aside {
     display: flex;
     flex-direction: column;
     min-height: calc(100vh - 81px);
 }
 
-/* Ajuste para celular */
+/* =======================================
+   AJUSTE CORRETO PARA CELULAR (MOBILE)
+   ======================================= */
 @media (max-width: 768px) {
     .box-tema-inferior {
-        margin-top: 15px;
+        margin-top: 15px; /* Remove o espaçamento gigante */
         padding: 10px;
         border-top: none;
+    }
+    
+    /* ESTA É A CORREÇÃO: Remove a altura forçada do menu no celular */
+    aside {
+        min-height: auto !important; 
+        height: auto;
     }
 }
