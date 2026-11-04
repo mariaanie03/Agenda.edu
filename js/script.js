@@ -29,6 +29,37 @@ function mostrarAlerta(mensagem, titulo = "Aviso") {
     });
 }
 
+
+function mostrarConfirmacao(mensagem, titulo = "Aviso") {
+    return new Promise((resolve) => {
+        // Usa o template de ação (que já tem Confirmar e Cancelar)
+        const clone = document.getElementById('tpl-modal-acao-turma').content.cloneNode(true);
+        document.body.appendChild(clone);
+        
+        // Pega o modal recém-adicionado
+        const modais = document.querySelectorAll('.modal-overlay');
+        const modal = modais[modais.length - 1]; // Pega o último modal aberto
+        
+        modal.querySelector('#mod-acao-titulo').innerText = titulo;
+        modal.querySelector('#mod-acao-texto').innerText = mensagem;
+        
+        // Garante que campos de edição (se houver) fiquem ocultos
+        const camposEdicao = modal.querySelector('#mod-campos-edicao');
+        if (camposEdicao) camposEdicao.style.display = 'none';
+
+        // Lógica dos botões
+        modal.querySelector('#btn-confirmar-acao').onclick = () => {
+            modal.remove();
+            resolve(true); // Retorna verdadeiro
+        };
+
+        modal.querySelector('#btn-cancelar-acao').onclick = () => {
+            modal.remove();
+            resolve(false); // Retorna falso
+        };
+    });
+}
+
 // =========================================================
 // 1. CONFIGURAÇÕES E ESTADO GLOBAL
 // =========================================================
@@ -334,34 +365,43 @@ async function renderizarProfessor() {
             return;
         }
 
-        container.innerHTML = listaFiltrada.map(t => {
-            const qtdPendentesTurma = pendentesGerais.filter(p => p.turmaId === t.id).length;
-            const badgePendencia = qtdPendentesTurma > 0 
-                ? `<span class="badge-pendente-prof">⚠️ ${qtdPendentesTurma} ${qtdPendentesTurma === 1 ? 'correção pendente' : 'correções pendentes'}</span>` 
-                : '';
+container.innerHTML = listaFiltrada.map(t => {
+        const qtdPendentesTurma = pendentesGerais.filter(p => p.turmaId === t.id).length;
+        const badgePendencia = qtdPendentesTurma > 0 
+            ? `<span class="badge-pendente-prof">⚠️ ${qtdPendentesTurma} ${qtdPendentesTurma === 1 ? 'correção pendente' : 'correções pendentes'}</span>` 
+            : '';
 
-            return `
-                <div class="card-item">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <div>
-                            <h3 style="margin-bottom: 3px;">${t.nome}</h3>
-                            ${badgePendencia}
-                        </div>
-                        <div style="display:flex; gap: 5px;">
-                            <button onclick="prepararEdicao(${t.id})" title="Editar" style="border:none; background:none; cursor:pointer; font-size: 1rem;">✏️</button>
-                            <button onclick="excluirTurma(${t.id})" title="Excluir turma" style="border:none; background:none; cursor:pointer; font-size: 1rem;">🗑️</button>
+        return `
+            <div class="card-item">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 8px;">
+                    <div>
+                        <h3 style="margin-bottom: 3px;">${t.nome}</h3>
+                        ${badgePendencia}
+                    </div>
+                    
+                    <!-- MENU DROPDOWN DE OPÇÕES -->
+                    <div class="dropdown-container">
+                        <button onclick="abrirMenuTurma(event, ${t.id})" class="btn-opcoes">⚙️ Opções</button>
+                        
+                        <div id="menu-turma-${t.id}" class="dropdown-menu">
+                            <button onclick="prepararEdicao(${t.id})" class="dropdown-item">✏️ Editar Turma</button>
+                            <button onclick="abrirModalGerenciarAlunos(${t.id}, '${t.nome.replace(/'/g, "\\'")}')" class="dropdown-item">👥 Gerenciar Alunos</button>
+                            <button onclick="excluirTurma(${t.id})" class="dropdown-item" style="color: #c0392b;">🗑️ Excluir Turma</button>
                         </div>
                     </div>
-                    <p style="font-size: 0.85rem; color: #2c3e50; font-weight: bold; margin-bottom: 5px;">
-                        ${t.disciplina ? '📖 ' + t.disciplina : ''}
-                    </p>
-                    <span class="info-tag" style="font-size:0.8rem; color:#666;">Código: ${t.codigo_convite}</span>
-                    <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 15px;">
-                        <button onclick="gerenciarTurma(${t.id}, '${t.nome}')" class="btn-enviar" style="padding: 10px; font-size: 0.9rem; background: var(--dark-green);">Corrigir cronogramas</button>
-                        <button onclick="abrirModalAgendar(${t.id})" class="btn-cancelar" style="margin-top: 0; padding: 10px; font-size: 0.9rem; background: #e2ebd8; color: var(--dark-green); font-weight: bold;">Propor cronogramas</button>
-                    </div>
-                </div>`;
-        }).join('');
+                </div>
+
+                <p style="font-size: 0.85rem; color: #2c3e50; font-weight: bold; margin-bottom: 4px;">
+                    ${t.disciplina ? '📖 ' + t.disciplina : ''}
+                </p>
+                <span class="info-tag" style="font-size:0.8rem; color:#666; display: block; margin-bottom: 15px;">Código: ${t.codigo_convite}</span>
+                
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button onclick="gerenciarTurma(${t.id}, '${t.nome}')" class="btn-enviar" style="padding: 10px; font-size: 0.9rem; background: var(--dark-green);">Corrigir cronogramas</button>
+                    <button onclick="abrirModalAgendar(${t.id})" class="btn-cancelar" style="margin-top: 0; padding: 10px; font-size: 0.9rem; background: #e2ebd8; color: var(--dark-green); font-weight: bold;">Propor cronogramas</button>
+                </div>
+            </div>`;
+    }).join('');
     };
 
     desenharTurmas(turmas);
@@ -435,16 +475,35 @@ function editarTurma(turmaId, dadosTurma) {
 }
 
 // Chamada da Exclusão
-function excluirTurma(turmaId) {
-    abrirModalAcao(
-        "Excluir Turma", 
-        "Tem certeza que deseja excluir esta turma? Esta ação não pode ser desfeita.", 
-        "excluir", 
-        async () => {
-            await _supabase.from('turmas').delete().eq('id', turmaId);
-            renderizarProfessor();
-        }
+async function excluirTurma(turmaId) {
+    const confirmou = await mostrarConfirmacao(
+        "Tem certeza que deseja excluir esta turma? Todos os cronogramas e matrículas vinculados serão apagados permanentemente.", 
+        "Excluir Turma"
     );
+
+    if (confirmou) {
+        try {
+            // 1. Apaga os registros de alunos matriculados nesta turma
+            await _supabase.from('turma_alunos').delete().eq('turma_id', turmaId);
+
+            // 2. Apaga os cronogramas vinculados a esta turma
+            await _supabase.from('cronograma').delete().eq('turma_id', turmaId);
+
+            // 3. Por fim, apaga a turma
+            const { error } = await _supabase.from('turmas').delete().eq('id', turmaId);
+
+            if (error) {
+                console.error("Erro do Supabase:", error);
+                await mostrarAlerta("Erro ao excluir turma: " + error.message, "Erro no Banco de Dados");
+            } else {
+                await mostrarAlerta("Turma excluída com sucesso!", "Sucesso");
+                renderizarProfessor(); // Recarrega a tela do professor
+            }
+        } catch (err) {
+            console.error("Erro inesperado:", err);
+            await mostrarAlerta("Ocorreu um erro inesperado ao tentar excluir a turma.", "Erro");
+        }
+    }
 }
 
 
@@ -559,7 +618,7 @@ async function selecionarCronogramaParaCorrecao(cronogramaId, cronogramaTitulo, 
             }
         }
 
-        return `
+return `
             <div onclick="abrirModalCorrecaoAluno(${cronogramaId}, '${cronogramaTitulo}', ${a.aluno_id}, '${a.usuarios.nome}')" style="padding:12px; border-bottom:1px solid #eee; font-size:0.9rem; cursor:pointer; border-radius:6px; display:flex; justify-content:space-between; align-items:center; background:#fafcf8; margin-bottom:8px;">
                 <div style="display:flex; align-items:center; gap:8px;">
                     <span>👤</span> <b>${a.usuarios.nome}</b>
@@ -911,25 +970,113 @@ async function renderizarAluno() {
 }
 
 // Nova função para processar a saída do aluno da turma
+// Substitua a função sairDaTurma existente por esta:
 async function sairDaTurma(relacaoId, nomeTurma) {
-    const confirmou = await mostrarAlerta(
+    // Substituímos o mostrarAlerta + window.confirm pela nova função
+    const confirmou = await mostrarConfirmacao(
         `Tem certeza de que deseja sair da turma "${nomeTurma}"? Você perderá o acesso aos materiais e notas até entrar novamente com o código.`, 
         "Sair da Turma"
     );
 
-    // Como o nosso modal de alerta retorna uma Promise simples sem booleano de confirmação nativo, 
-    // vamos usar o confirm padrão do navegador para garantir a segurança da exclusão:
-    if (window.confirm(`Deseja realmente sair da turma "${nomeTurma}"?`)) {
+    // Se o aluno clicou em "Confirmar"
+    if (confirmou) {
         const { error } = await _supabase.from('turma_alunos').delete().eq('id', relacaoId);
         
         if (error) {
             await mostrarAlerta("Erro ao sair da turma: " + error.message, "Erro");
         } else {
             await mostrarAlerta("Você saiu da turma com sucesso.", "Sucesso");
-            renderizarAluno();
+            renderizarAluno(); // Recarrega a tela
         }
     }
 }
+
+
+// 1. Função que abre a lista de alunos da turma em um Modal
+async function abrirModalGerenciarAlunos(turmaId, nomeTurma) {
+    // Cria o modal via JavaScript
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML = `
+        <div class="login-card fade-in" style="max-width: 500px; display: flex; flex-direction: column; max-height: 85vh;">
+            <h3 style="color: var(--dark-green); margin-bottom: 5px; text-align: center;">👥 Gerenciar Alunos</h3>
+            <p style="text-align:center; font-size:0.85rem; color:#666; margin-bottom:15px; font-weight:bold;">${nomeTurma}</p>
+            
+            <div id="lista-alunos-modal" class="lista-simples" style="overflow-y: auto; flex-grow: 1; margin-bottom: 15px; padding-right: 5px; min-height: 150px;">
+                <p style="text-align:center; font-size:0.85rem; color:#666; margin-top:20px;">Carregando alunos...</p>
+            </div>
+            
+            <button type="button" id="btn-fechar-modal-alunos" class="btn-cancelar">Fechar</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    const containerLista = overlay.querySelector('#lista-alunos-modal');
+    
+    // Função interna para buscar e desenhar os alunos
+    const carregarAlunos = async () => {
+        const { data: alunos, error } = await _supabase
+            .from('turma_alunos')
+            .select('aluno_id, usuarios(nome)')
+            .eq('turma_id', turmaId)
+            .order('usuarios(nome)', { ascending: true }); // Ordena por nome
+            
+        if (error) {
+            containerLista.innerHTML = `<p style="color:red; font-size:0.85rem; text-align:center;">Erro ao carregar alunos.</p>`;
+            return;
+        }
+
+        if (!alunos || alunos.length === 0) {
+            containerLista.innerHTML = `<p style="font-size:0.85rem; color:#666; text-align:center; margin-top:20px;">Nenhum aluno matriculado nesta turma no momento.</p>`;
+            return;
+        }
+
+        containerLista.innerHTML = alunos.map(a => `
+            <div style="padding:12px; border:1px solid #eee; font-size:0.9rem; border-radius:8px; display:flex; justify-content:space-between; align-items:center; background:#fafcf8; margin-bottom:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span>👤</span> <b>${a.usuarios.nome}</b>
+                </div>
+                <button onclick="removerAlunoPeloModal(${turmaId}, ${a.aluno_id}, '${a.usuarios.nome.replace(/'/g, "\\'")}')" title="Remover aluno" style="border:none; background:none; cursor:pointer; font-size: 1.1rem; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.2)';" onmouseout="this.style.transform='scale(1)';">
+                    🗑️
+                </button>
+            </div>
+        `).join('');
+    };
+
+    await carregarAlunos();
+
+    // Guardamos a função de recarregar no modal para atualizar a lista após deletar
+    overlay.carregarAlunos = carregarAlunos;
+
+    // Fechar Modal
+    overlay.querySelector('#btn-fechar-modal-alunos').onclick = () => overlay.remove();
+}
+
+// 2. Função que processa a exclusão e atualiza o Modal
+async function removerAlunoPeloModal(turmaId, alunoId, nomeAluno) {
+    const confirmou = await mostrarConfirmacao(
+        `Tem certeza de que deseja remover o(a) estudante "${nomeAluno}" da turma?`, 
+        "Remover Estudante"
+    );
+
+    if (confirmou) {
+        const { error } = await _supabase.from('turma_alunos').delete().eq('turma_id', turmaId).eq('aluno_id', alunoId);
+        
+        if (error) {
+            await mostrarAlerta("Erro ao remover aluno: " + error.message, "Erro");
+        } else {
+            await mostrarAlerta("Estudante removido com sucesso.", "Sucesso");
+            
+            // Pega o modal de alunos (que está aberto por baixo do aviso) e recarrega a lista dele
+            const modaisAbertos = document.querySelectorAll('.modal-overlay');
+            const modalAlunos = modaisAbertos[modaisAbertos.length - 1]; 
+            if (modalAlunos && modalAlunos.carregarAlunos) {
+                modalAlunos.carregarAlunos();
+            }
+        }
+    }
+}
+
 
 function abrirModalEntrarTurma() {
     const clone = document.getElementById('tpl-modal-entrar-turma').content.cloneNode(true);
@@ -1363,6 +1510,37 @@ document.addEventListener('click', (e) => {
     if (e.target && e.target.closest('#btn-abrir-modal-tema')) {
         e.preventDefault();
         abrirModalTemas();
+    }
+});
+
+
+// =========================================================
+// LÓGICA DO MENU DROPDOWN (OPÇÕES DA TURMA)
+// =========================================================
+
+function abrirMenuTurma(event, turmaId) {
+    event.stopPropagation(); // Impede que o clique feche o menu na mesma hora
+    
+    // Fecha todos os outros menus que possam estar abertos de outras turmas
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu.id !== `menu-turma-${turmaId}`) {
+            menu.classList.remove('mostrar');
+        }
+    });
+    
+    // Alterna (abre/fecha) o menu da turma que foi clicada
+    const menuAtual = document.getElementById(`menu-turma-${turmaId}`);
+    if (menuAtual) {
+        menuAtual.classList.toggle('mostrar');
+    }
+}
+
+// Evento global: se o professor clicar em qualquer lugar da tela fora do menu, o menu fecha
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.btn-opcoes')) {
+        document.querySelectorAll('.dropdown-menu.mostrar').forEach(menu => {
+            menu.classList.remove('mostrar');
+        });
     }
 });
 

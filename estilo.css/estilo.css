@@ -296,20 +296,22 @@ main:has(.dashboard), main:has(.home-layout) {
 
 .grid-cards { 
     display: grid; 
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); 
     gap: 20px; 
     width: 100%; 
 }
 
 .card-item { 
     background: white; 
-    padding: 25px; 
-    border-radius: 16px; 
+    padding: 22px; 
+    border-radius: 14px; 
     border-top: 5px solid var(--dark-green); 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.04);
-    border-left: 1px solid #eaeaea;
-    border-right: 1px solid #eaeaea;
-    border-bottom: 1px solid #eaeaea;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border: 1px solid #eaeaea;
+    border-top: 5px solid var(--dark-green);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 .card-item h3 {
@@ -850,3 +852,72 @@ aside {
         height: auto;
     }
 }
+
+/* =========================================================
+   MENU DROPDOWN DE OPÇÕES DA TURMA (TELA PROFESSOR)
+   ========================================================= */
+.dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.btn-opcoes {
+    background: #f0f4eb;
+    color: var(--dark-green);
+    border: 1px solid #d5e0cc;
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 5px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.btn-opcoes:hover {
+    background: #e2e8df;
+}
+
+.dropdown-menu {
+    display: none; /* Fica escondido por padrão */
+    position: absolute;
+    right: 0;
+    top: 115%;
+    background-color: white;
+    min-width: 170px;
+    box-shadow: 0px 8px 20px rgba(0,0,0,0.12);
+    z-index: 100;
+    border-radius: 8px;
+    border: 1px solid #eaeaea;
+    overflow: hidden;
+}
+
+.dropdown-menu.mostrar {
+    display: block; /* Aparece quando clicado */
+    animation: fadeIn 0.2s ease;
+}
+
+.dropdown-item {
+    color: #444;
+    padding: 12px 15px;
+    text-decoration: none;
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    border-bottom: 1px solid #f5f5f5;
+    text-align: left;
+    background: white;
+    width: 100%;
+    transition: background 0.2s;
+}
+
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.dropdown-item:hover {
+    background-color: #f9fbf6;
+    color: var(--dark-green);
+}
+
