@@ -39,6 +39,6 @@ Este projeto foi desenvolvido utilizando as seguintes tecnologias:
 
 * **Frontend:** HTML5, CSS3 (com variáveis customizadas e design responsivo) e JavaScript moderno.
 * **Backend / Banco de Dados:** [Supabase](https://supabase.com/) para autenticação e persistência de dados.
-* **Hospedagem / Deploy:** Agenda.edu(https://https://agendaedu.netlify.app).
+* **Hospedagem / Deploy:** Netlify(https://https://agendaedu.netlify.app).
 
 ---
